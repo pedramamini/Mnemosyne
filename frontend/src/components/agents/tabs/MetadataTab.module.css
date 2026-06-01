@@ -1,0 +1,26 @@
+.panel {
+  max-width: 42rem;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.label {
+  /* Label column holds its width; value column flexes. */
+  min-width: 0;
+}
+
+.value {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .fact {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}

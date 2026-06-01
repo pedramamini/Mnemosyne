@@ -1,0 +1,31 @@
+.trigger {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
+
+/* Camera scrim revealed on hover/focus to signal "click to change". */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--color-overlay);
+  color: var(--color-primary-fg);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.trigger:hover .overlay,
+.trigger:focus-within .overlay {
+  opacity: 1;
+}
+
+/* Touch devices have no hover - keep the affordance faintly visible. */
+@media (hover: none) {
+  .overlay {
+    opacity: 0.85;
+  }
+}

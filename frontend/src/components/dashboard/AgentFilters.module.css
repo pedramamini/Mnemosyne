@@ -1,0 +1,27 @@
+/* Search + filter toolbar: search grows, the selects sit at fixed widths. */
+.toolbar {
+  width: 100%;
+}
+
+.search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filter {
+  flex: 0 0 auto;
+  width: 11rem;
+  max-width: 100%;
+}
+
+/* Stack the toolbar on narrow viewports so no control is cramped. */
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter {
+    width: 100%;
+  }
+}

@@ -1,0 +1,39 @@
+/* The collapse toggle is desktop-only: on narrow viewports the sidebar is an
+   off-canvas drawer dismissed by its backdrop / the TopBar hamburger instead. */
+.collapseToggle {
+  display: inline-flex;
+}
+
+@media (max-width: 768px) {
+  .collapseToggle {
+    display: none;
+  }
+}
+
+.glyph {
+  font-size: var(--text-2xl);
+  line-height: 1;
+}
+
+/* Brand wordmark - pinned to the brand face (--font-brand) so it never tracks
+   the user's chosen app font, only the rest of the UI does. Matches the old
+   Heading level-4 size/weight it replaced. */
+.brand {
+  font-family: var(--font-brand);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Mobile-only sidebar toggle (no top bar to host one). Hidden on desktop, where
+   the sidebar is a persistent column. */
+.mobileMenu {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobileMenu {
+    display: block;
+    padding: var(--space-3) var(--space-3) 0;
+  }
+}

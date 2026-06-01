@@ -1,0 +1,6 @@
+.panel {
+  background-color: var(--color-surface);
+  border-style: solid;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}

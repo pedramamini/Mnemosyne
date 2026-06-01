@@ -1,0 +1,33 @@
+/* Two-pane master/detail: a fixed-width master beside a flexible detail. The
+   master width is token-overridable per screen via the `--rmd-master-width`
+   custom property (set inline from the `masterWidth` prop). */
+.root {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.master {
+  flex: 0 0 var(--rmd-master-width, 22rem);
+  max-width: var(--rmd-master-width, 22rem);
+  align-self: stretch;
+  min-width: 0;
+}
+
+.detail {
+  flex: 1 1 auto;
+  /* min-width:0 lets long/overflowing detail content (diffs, wide tables) stay
+     inside the column and scroll internally instead of forcing page overflow. */
+  min-width: 0;
+}
+
+/* On mobile only a single pane is mounted at a time (master OR detail), so the
+   detail is a full-width push view rather than a cramped side column. */
+.mobilePane {
+  width: 100%;
+  min-width: 0;
+}
+
+.back {
+  margin-bottom: var(--space-3);
+}

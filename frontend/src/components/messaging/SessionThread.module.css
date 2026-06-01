@@ -1,0 +1,51 @@
+.state {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+/* Agent (outbound) turns align to the right. */
+.outbound {
+  align-items: flex-end;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bubble {
+  max-width: min(42rem, 100%);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-base);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inBubble {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.outBubble {
+  background-color: var(--color-primary-subtle);
+  color: var(--color-text);
+}

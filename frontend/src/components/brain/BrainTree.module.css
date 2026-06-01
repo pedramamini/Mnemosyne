@@ -1,0 +1,66 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.row:hover {
+  background-color: var(--color-surface-sunken);
+}
+
+.selected {
+  background-color: var(--color-surface-sunken);
+}
+
+/* The main clickable row button: left-aligned, fills the row, truncates. */
+.rowButton {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+  text-align: start;
+}
+
+.rowButton :global(.label),
+.rowButton > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chevron + folder/file glyphs grouped at the row's leading edge. */
+.leadIcons {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Keeps file rows aligned under directory rows (no chevron on files). */
+.chevronSpacer {
+  display: inline-block;
+  width: 16px;
+}
+
+/* Per-row hover affordances (new file / delete) - revealed on hover or focus. */
+.affordances {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.row:hover .affordances,
+.affordances:focus-within {
+  opacity: 1;
+}

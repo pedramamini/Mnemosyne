@@ -1,0 +1,58 @@
+/* HtmlArtifact - a framed, sandboxed HTML preview inside an assistant message. */
+.card {
+  width: 100%;
+  max-width: min(46rem, 100%);
+  margin-top: var(--space-3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background-color: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+
+/* The sandboxed document canvas. White, since artifact HTML is its own document
+   and frequently has no explicit background (a dark chrome would hide its text). */
+.frame {
+  display: block;
+  width: 100%;
+  height: 26rem;
+  border: 0;
+  background-color: #ffffff;
+}
+
+/* The expanded (modal) variant fills the dialog body. */
+.frameLarge {
+  display: block;
+  width: 100%;
+  height: min(72vh, 56rem);
+  border: 0;
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}

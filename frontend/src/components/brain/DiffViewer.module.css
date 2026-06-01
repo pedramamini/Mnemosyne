@@ -1,0 +1,113 @@
+.files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.file {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.fileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background-color: var(--color-surface-sunken);
+  padding-inline-end: var(--space-2);
+}
+
+/* The collapse toggle fills the header; its label lays the path/badge/counts out. */
+.fileToggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+  text-align: start;
+  border-radius: 0;
+}
+
+.fileToggle :global(.label) {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fileHeaderInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.filePath {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.counts {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+}
+
+.countAdd {
+  color: var(--color-success);
+}
+
+.countDel {
+  color: var(--color-danger);
+}
+
+.fileActions {
+  flex: 0 0 auto;
+}
+
+/* The unified-diff body - a monospace, horizontally-scrollable line list. */
+.body {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--line-height-base);
+  overflow-x: auto;
+}
+
+.line {
+  display: flex;
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
+}
+
+.gutter {
+  flex: 0 0 auto;
+  width: 1ch;
+  text-align: center;
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.lineText {
+  white-space: pre;
+}
+
+.add {
+  background-color: var(--color-success-subtle);
+}
+
+.del {
+  background-color: var(--color-danger-subtle);
+}
+
+.context {
+  color: var(--color-text);
+}
+
+/* Hunk header (`@@ … @@`) - a muted separator between change regions. */
+.hunk {
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-sunken);
+}
+
+.note {
+  display: block;
+  padding: var(--space-2);
+}

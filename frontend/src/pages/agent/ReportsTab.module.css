@@ -1,0 +1,11 @@
+/* Layout is handled by <ResponsiveMasterDetail>; these only tune the panes. */
+
+/* The search + list column scrolls within the master pane when it grows tall. */
+.listPane {
+  overflow: auto;
+}
+
+/* min-width:0 lets rendered markdown / wide tables stay inside the column. */
+.viewerPane {
+  min-width: 0;
+}

@@ -1,0 +1,34 @@
+/* Conversation nav rail: header action, search, scrollable thread list. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  height: 100%;
+  padding: var(--space-3);
+}
+
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Each conversation item stacks title + preview; the meta time trails. */
+.item {
+  align-items: flex-start;
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-6);
+}

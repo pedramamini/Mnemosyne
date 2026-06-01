@@ -1,0 +1,78 @@
+# CI/CD (MNEMO-50, PRD §3) — trigger → environment mapping
+# ───────────────────────────────────────────────────────────────────────────────
+#   pull_request                  → checks only (typecheck + lint + test). No deploy.
+#   push to the default branch    → checks, then release:staging (deploy to staging).
+#   published release / v* tag    → checks, then release:prod (deploy to production).
+# ───────────────────────────────────────────────────────────────────────────────
+# Deploy auth is a CLOUDFLARE_API_TOKEN GitHub Actions secret, passed to Wrangler via
+# the environment — never echoed. Prod is gated on the same checks as everything else
+# AND only fires from a tagged release, so a bad merge to the default branch can reach
+# staging but never production. Migrations run BEFORE deploy inside the release:* npm
+# scripts (see package.json / docs/RELEASE.md), so new code never hits an un-migrated
+# schema.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  # Always run on every trigger: the fast, no-deploy quality gate.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  # Deploy to STAGING on a push to the default branch (after checks pass).
+  deploy-staging:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: deploy-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # release:staging = typecheck -> test -> lint -> check:secrets -> migrate -> deploy
+      # (fail-fast). The token authorizes both `wrangler d1 migrations apply` and
+      # `wrangler deploy`.
+      - run: npm run release:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  # Deploy to PRODUCTION only on a published GitHub release (or v* tag).
+  deploy-production:
+    needs: checks
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    concurrency: deploy-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # release:prod = typecheck -> test -> lint -> check:secrets -> migrate -> deploy
+      # (fail-fast), against the production Wrangler environment.
+      - run: npm run release:prod
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

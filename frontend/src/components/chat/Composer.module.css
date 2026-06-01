@@ -1,0 +1,80 @@
+/* Sticky bottom composer: a column holding the input row and an interim
+   transcript line that surfaces live speech recognition. */
+.composer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-5);
+  /* Respect the iOS home-indicator safe area on mobile. */
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+/* The input line: voice controls, the growing textarea, then the send action. */
+.inputRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Auto-grow textarea: no manual resize, capped height, scrolls past the cap. */
+.textarea {
+  resize: none;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+/* Voice controls hug the start, bottom-aligned with the send button. */
+.micGroup {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.action {
+  flex: 0 0 auto;
+  margin-bottom: var(--space-1);
+}
+
+/* Gentle pulse while the mic is live. */
+.listening {
+  animation: composer-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes composer-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Always reserved so the layout doesn't jitter as interim transcripts arrive
+   and clear during dictation. */
+.interim {
+  min-height: 1.125rem;
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.interimLabel {
+  margin-right: var(--space-2);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.625rem;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}

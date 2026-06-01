@@ -1,0 +1,86 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+}
+
+.alignLeft {
+  justify-content: flex-start;
+}
+.alignRight {
+  justify-content: flex-end;
+}
+
+.backdropClick {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-overlay);
+  animation: fade var(--dur-base) var(--ease-standard);
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(28rem, 100%);
+  height: 100%;
+  background-color: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-3);
+}
+
+.fromRight {
+  animation: slideFromRight var(--dur-base) var(--ease-emphasized);
+}
+.fromLeft {
+  border-left: 0;
+  border-right: 1px solid var(--color-border);
+  animation: slideFromLeft var(--dur-base) var(--ease-emphasized);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  min-width: 0;
+}
+
+.body {
+  flex: 1;
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slideFromRight {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+}

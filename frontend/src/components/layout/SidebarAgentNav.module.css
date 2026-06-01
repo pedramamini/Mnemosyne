@@ -1,0 +1,76 @@
+.root {
+  margin-top: var(--space-2);
+}
+
+.label {
+  padding: var(--space-1) var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Group heading inside the collapsed-rail flyout panel. */
+.flyoutGroup {
+  display: block;
+  padding: var(--space-2) var(--space-2) var(--space-1);
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Keeps the "Ungrouped" label aligned with named groups (which lead with a
+   chevron toggle) by reserving the same leading footprint. */
+.chevronSpacer {
+  flex-shrink: 0;
+  width: 1.75rem;
+}
+
+.groupName {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Nest a group's agents under its header. */
+.groupItems {
+  padding-left: var(--space-3);
+}
+
+.agentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.agentLink {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The overflow menu stays out of the way until the row is hovered/focused;
+   always visible on touch devices, which have no hover state. */
+.agentMenu {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.agentRow:hover .agentMenu,
+.agentRow:focus-within .agentMenu {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .agentMenu {
+    opacity: 1;
+  }
+}

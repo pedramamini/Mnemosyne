@@ -1,0 +1,53 @@
+/* Centered single-card layout for the unauthenticated auth screens. */
+.wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/* Subtle repeating "neural lattice" (connected nodes) behind the card. Grey at
+   low opacity so it reads as faint texture on any theme; a radial mask fades it
+   out toward the edges so the card sits on calmer ground. */
+.wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'84'%20height%3D'84'%3E%3Cg%20fill%3D'none'%20stroke%3D'%2364748b'%20stroke-width%3D'1'%3E%3Cpath%20d%3D'M42%2042L0%200M42%2042L84%200M42%2042L0%2084M42%2042L84%2084M42%2042L42%200M42%2042L42%2084M42%2042L0%2042M42%2042L84%2042'%2F%3E%3C%2Fg%3E%3Cg%20fill%3D'%2364748b'%3E%3Ccircle%20cx%3D'42'%20cy%3D'42'%20r%3D'2.6'%2F%3E%3Ccircle%20cx%3D'0'%20cy%3D'0'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'84'%20cy%3D'0'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'0'%20cy%3D'84'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'84'%20cy%3D'84'%20r%3D'2'%2F%3E%3Ccircle%20cx%3D'42'%20cy%3D'0'%20r%3D'1.4'%2F%3E%3Ccircle%20cx%3D'0'%20cy%3D'42'%20r%3D'1.4'%2F%3E%3Ccircle%20cx%3D'84'%20cy%3D'42'%20r%3D'1.4'%2F%3E%3Ccircle%20cx%3D'42'%20cy%3D'84'%20r%3D'1.4'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  background-repeat: repeat;
+  opacity: 0.07;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    #000 0%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 78%);
+}
+
+/* Card + any below-card captions, stacked and centered above the pattern. */
+.column {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 34rem;
+}
+
+.card {
+  width: 100%;
+}
+
+/* Staging-only sign-in notice that sits below the card. */
+.column .stagingNote {
+  text-align: center;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

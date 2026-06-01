@@ -1,0 +1,53 @@
+/* The stream column: a status bar, a scrolling log, and a floating live pill. */
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.statusBar {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: var(--space-2);
+}
+
+.statusBusy {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* The scrollable log region; rows stack top→bottom, newest at the bottom. */
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.loadOlder {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+
+/* The "Jump to live" pill floats over the lower edge when not auto-following. */
+.jump {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-base);
+}
+
+.disconnected {
+  padding-top: var(--space-2);
+  text-align: center;
+}

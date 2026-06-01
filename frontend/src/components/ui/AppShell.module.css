@@ -1,0 +1,115 @@
+.shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--app-sidebar-width, 16rem) 1fr;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--gradient-sidebar);
+  border-right: 1px solid var(--color-border);
+  /* Remap the semantic color roles within the sidebar so every child
+     (NavItem, Text, IconButton, Badge, in-scope Menu…) renders light-on-color
+     against the gradient with zero per-component CSS. Overlays that portal to
+     <body> (Modal, the collapsed-rail flyout) escape this scope and keep the
+     normal page palette. */
+  --color-text: var(--color-sidebar-fg);
+  --color-text-muted: var(--color-sidebar-fg-muted);
+  --color-surface: var(--color-sidebar-surface);
+  --color-surface-raised: var(--color-sidebar-popover);
+  --color-surface-sunken: var(--color-sidebar-hover);
+  --color-border: var(--color-sidebar-border);
+  --color-border-strong: var(--color-sidebar-border-strong);
+  --color-primary: var(--color-sidebar-fg);
+  --color-primary-subtle: var(--color-sidebar-active);
+  --color-focus-ring: var(--color-sidebar-focus);
+}
+
+/* Drag-to-resize separator straddling the sidebar's right border. Positioned
+   against the live width var so it tracks the edge. Desktop + expanded only. */
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  left: calc(var(--app-sidebar-width, 16rem) - 3px);
+  width: 6px;
+  height: 100%;
+  z-index: var(--z-base);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizeHandle:hover,
+.resizeHandle:focus-visible {
+  background-color: var(--color-primary-subtle);
+  outline: none;
+}
+
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.backdrop {
+  display: none;
+}
+
+/* Collapsed = a narrow icon rail (not hidden): the brand glyph + agent avatars
+   stay visible. Resizing is disabled while collapsed. Desktop only. */
+@media (min-width: 769px) {
+  .shellCollapsed .resizeHandle {
+    display: none;
+  }
+}
+
+/* Narrow viewports: sidebar becomes an off-canvas drawer; rail/resize don't
+   apply (the drawer renders full-width content). */
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: var(--z-overlay);
+    width: 16rem;
+    transform: translateX(-100%);
+    transition: transform var(--dur-base) var(--ease-emphasized);
+    box-shadow: var(--shadow-3);
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .resizeHandle {
+    display: none;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-dropdown);
+    background-color: var(--color-overlay);
+  }
+}

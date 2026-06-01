@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#4f46e5" />
+    <title>Mnemosyne - Research that remembers</title>
+    <meta
+      name="description"
+      content="Self-serve research agents with a memory that compounds - each gets its own sandboxed computer, a living brain, and the tools it writes for itself."
+    />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Open Graph / Twitter - rich link previews (Slack, iMessage, X, …). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mnemosyne" />
+    <meta property="og:title" content="Mnemosyne - Research that remembers" />
+    <meta
+      property="og:description"
+      content="Self-serve research agents with a memory that compounds - each gets its own sandboxed computer, a living brain, and the tools it writes for itself."
+    />
+    <meta
+      property="og:url"
+      content="https://mnemosyne-staging.smashlabs.workers.dev/"
+    />
+    <meta
+      property="og:image"
+      content="https://mnemosyne-staging.smashlabs.workers.dev/og-image.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Mnemosyne - research that remembers"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Mnemosyne - Research that remembers"
+    />
+    <meta
+      name="twitter:description"
+      content="Self-serve research agents with a memory that compounds."
+    />
+    <meta
+      name="twitter:image"
+      content="https://mnemosyne-staging.smashlabs.workers.dev/og-image.png"
+    />
+
+    <!-- Typography skins (see [data-font] blocks in tokens.css). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+    />
+
+    <!-- Apply the persisted theme/typeface before first paint (no flash). -->
+    <script>
+      (function () {
+        try {
+          var read = function (key, fallback) {
+            var raw = localStorage.getItem(key);
+            if (raw == null) return fallback;
+            try {
+              return JSON.parse(raw);
+            } catch (e) {
+              return raw;
+            }
+          };
+          var theme = read("mnemosyne:appearance:theme", "light");
+          var font = read("mnemosyne:appearance:font", "grotesk");
+          var el = document.documentElement;
+          el.setAttribute("data-theme", theme);
+          el.setAttribute("data-font", font);
+          var dark = ["dark", "nord", "dracula", "gruvbox"];
+          el.style.colorScheme = dark.indexOf(theme) >= 0 ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

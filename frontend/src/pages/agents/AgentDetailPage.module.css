@@ -1,0 +1,15 @@
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.header {
+  /* Avatar + name/badges sit on one row; the text column may shrink/truncate. */
+  min-width: 0;
+}
+
+.headerText {
+  min-width: 0;
+}

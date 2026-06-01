@@ -1,0 +1,68 @@
+/* Two-column layout: conversation on the left, rubric/confidence on the right. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* Stack to a single column on narrow viewports (rubric drops below the chat). */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conversation {
+  min-width: 0;
+}
+
+.transcript {
+  max-height: 28rem;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.intro {
+  margin: 0;
+}
+
+.bubble {
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.bubbleText {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Assistant turns anchor left on a raised surface. */
+.assistant {
+  align-self: flex-start;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+}
+
+/* User turns anchor right in the primary tint. */
+.user {
+  align-self: flex-end;
+  background: var(--color-primary-subtle);
+}
+
+/* Keep the rubric panel beside the conversation; it stays put as chat scrolls. */
+.rubric {
+  position: sticky;
+  top: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .rubric {
+    position: static;
+  }
+}

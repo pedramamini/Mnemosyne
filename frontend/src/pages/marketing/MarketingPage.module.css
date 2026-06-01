@@ -1,0 +1,345 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.container {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: var(--space-5);
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────────── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-dropdown);
+  background-color: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 3.5rem;
+}
+
+.brand {
+  font-family: var(--font-brand);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+/* Top-left brand as a two-tone pill: the 🧠 sits on a slightly sunken segment,
+   the wordmark on the surface segment - echoing the "Made with Maestro" badge.
+   The pill is its own affordance, so the link variant's hover underline is
+   dropped (the `button.` type selector outranks Button's `.link:hover`). */
+.brandLink {
+  border-radius: var(--radius-full);
+}
+
+button.brandLink:hover {
+  text-decoration: none;
+}
+
+.brandPill {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  font-family: var(--font-brand);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+.brandLink:hover .brandPill {
+  border-color: var(--color-primary);
+}
+
+.brandGlyph {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--color-surface-sunken);
+}
+
+.brandName {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  background-color: var(--color-surface);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+/* Short centered tick between nav items so each link reads as its own target
+   (overrides Divider's stretch + min-height defaults). */
+.navDivider {
+  align-self: center;
+  height: 1.25rem;
+  min-height: 0;
+}
+
+/* Hamburger trigger - hidden until the inline nav collapses. */
+.menuButton {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .nav {
+    display: none;
+  }
+
+  .menuButton {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 600px) {
+  .cmdkButton {
+    display: none;
+  }
+}
+
+/* ─── Hero ────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding-block: var(--space-12) var(--space-10);
+}
+
+.heroGlow {
+  position: absolute;
+  top: -10rem;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: min(48rem, 90%);
+  height: 30rem;
+  background: var(--gradient-sidebar);
+  filter: blur(90px);
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  max-width: 18ch;
+}
+
+.heroSub {
+  max-width: 44rem;
+}
+
+/* ─── Generic section ─────────────────────────────────────────────────────── */
+.section {
+  padding-block: var(--space-10);
+  scroll-margin-top: 5rem;
+}
+
+.prose {
+  max-width: 46rem;
+}
+
+/* About: copy on the left, the neural constellation on the right. */
+.aboutGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.constellation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-border-strong);
+}
+
+.constellationSvg {
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+}
+
+/* Narrow viewports: drop the decorative column, let the copy run full width. */
+@media (max-width: 860px) {
+  .aboutGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .constellation {
+    display: none;
+  }
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+}
+
+/* ─── Feature + roadmap grids ─────────────────────────────────────────────── */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--space-4);
+}
+
+.roadmapGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+.featureCard {
+  height: 100%;
+}
+
+.featureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+/* ─── How it works ────────────────────────────────────────────────────────── */
+.stepGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-6);
+}
+
+.step {
+  position: relative;
+}
+
+.stepNum {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+/* ─── CTA band ────────────────────────────────────────────────────────────── */
+.ctaBand {
+  margin-block: var(--space-10);
+  padding-block: var(--space-11);
+  background: var(--gradient-sidebar);
+  /* Remap the muted role to the on-gradient white-alpha token so the subtitle
+     reads against every theme's gradient (Text forces an inline color from the
+     role, so a plain class color loses). Scoped to -muted only: the solid
+     secondary button keeps --color-text and stays dark-on-cream. */
+  --color-text-muted: var(--color-sidebar-fg-muted);
+}
+
+.ctaInner {
+  text-align: center;
+}
+
+.ctaBand .ctaTitle {
+  color: var(--color-sidebar-fg);
+}
+
+.ctaBand .ctaSub {
+  max-width: 40rem;
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+.footer {
+  margin-top: auto;
+  padding-block: var(--space-7);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Three-column row: brand (left), Maestro badge (center), location (right),
+   all vertically centered on one baseline. */
+.footerRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.footerLocation {
+  justify-self: end;
+}
+
+@media (max-width: 600px) {
+  .footerRow {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: var(--space-5);
+    text-align: center;
+  }
+
+  .footerLocation {
+    justify-self: center;
+  }
+}
+
+/* "Made with Maestro" badge - theme-stylized pill. The scoped
+   `.maestroBar .maestroBadge` selector outranks NavItem's base `.item` rules. */
+.maestroBar {
+  display: flex;
+  justify-content: center;
+}
+
+.maestroBar .maestroBadge {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
+}
+
+.maestroBar .maestroBadge:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  background-color: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+.maestroLogo {
+  flex-shrink: 0;
+  border-radius: 4px;
+}

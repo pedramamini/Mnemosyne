@@ -1,0 +1,5 @@
+/* Step 1 form sits in a comfortable single-column reading width. */
+.panel {
+  width: 100%;
+  max-width: 40rem;
+}

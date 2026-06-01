@@ -1,0 +1,48 @@
+{
+  "name": "mnemosyne",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:audit": "node --experimental-sqlite --test test/audit-store.test.ts",
+    "test:memory": "node --experimental-sqlite --test test/graph-index.test.ts",
+    "test:retrieval": "node --experimental-sqlite --test test/graph-retrieval.test.ts",
+    "test:release": "node --test test/release-config.test.ts",
+    "migrate:local": "wrangler d1 migrations apply mnemosyne --local",
+    "migrate:remote": "wrangler d1 migrations apply mnemosyne --remote",
+    "migrate:staging": "wrangler d1 migrations apply mnemosyne-staging --remote --env staging",
+    "migrate:prod": "wrangler d1 migrations apply mnemosyne --remote --env production",
+    "check:secrets": "node scripts/check-secrets.ts",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:prod": "wrangler deploy --env production",
+    "release:staging": "npm run typecheck && npm run test && npm run lint && npm run check:secrets -- --env staging && npm run migrate:staging && npm run deploy:staging",
+    "release:prod": "npm run typecheck && npm run test && npm run lint && npm run check:secrets -- --env production && npm run migrate:prod && npm run deploy:prod",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@cloudflare/vitest-pool-workers": "^0.16.9",
+    "@cloudflare/workers-types": "^4.20260524.1",
+    "@vitest/coverage-istanbul": "^4.1.7",
+    "@vitest/coverage-v8": "^4.1.7",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7",
+    "wrangler": "^4.94.0"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.79",
+    "@ai-sdk/openai": "^3.0.65",
+    "@cloudflare/ai-chat": "^0.7.1",
+    "@cloudflare/sandbox": "^0.10.2",
+    "@openrouter/ai-sdk-provider": "^2.9.0",
+    "agents": "^0.12.4",
+    "ai": "^6.0.191",
+    "hono": "^4.12.22",
+    "workers-ai-provider": "^3.1.14",
+    "zod": "^4.4.3"
+  }
+}

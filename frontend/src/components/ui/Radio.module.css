@@ -1,0 +1,62 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.dot {
+  position: relative;
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  transform: translate(-50%, -50%) scale(0);
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.label {
+  font-size: var(--text-md);
+  color: var(--color-text);
+}
+
+.input:checked + .dot {
+  border-color: var(--color-primary);
+}
+
+.input:checked + .dot::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.input:focus-visible + .dot {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.input:disabled ~ .dot,
+.input:disabled ~ .label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

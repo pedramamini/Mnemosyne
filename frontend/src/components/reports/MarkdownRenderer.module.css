@@ -1,0 +1,106 @@
+/* Report body typography - token-driven, tight first/last margins. Mirrors the
+   chat markdown styling so rendered prose is consistent across the app. */
+.markdown {
+  font-size: var(--text-md);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  margin-block: var(--space-5) var(--space-2);
+}
+.markdown h1 {
+  font-size: var(--text-2xl);
+}
+.markdown h2 {
+  font-size: var(--text-xl);
+}
+.markdown h3 {
+  font-size: var(--text-lg);
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote,
+.markdown pre {
+  margin-block: var(--space-3);
+}
+.markdown ul,
+.markdown ol {
+  padding-left: var(--space-5);
+}
+
+.markdown a {
+  color: var(--color-primary);
+}
+
+.markdown blockquote {
+  margin-inline: 0;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.markdown code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background-color: var(--color-surface-sunken);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+}
+.markdown pre {
+  background-color: var(--color-surface-sunken);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+.markdown pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tables (GFM) - bordered, full width, readable cells. Wrapped in a horizontal
+   scroll container (see .tableScroll) so wide tables never overflow the viewport. */
+.tableScroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin-block: var(--space-3);
+}
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.markdown th,
+.markdown td {
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+.markdown th {
+  background-color: var(--color-surface-sunken);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Embedded chart PNGs - fit the column, never overflow. */
+.image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}

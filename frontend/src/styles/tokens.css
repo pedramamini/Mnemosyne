@@ -1,0 +1,426 @@
+/*
+ * Mnemosyne design tokens - the single source of truth for EVERY visual value.
+ *
+ * Components reference these custom properties only; they NEVER hardcode a color,
+ * space, font, radius, shadow, z-index, or duration. Reskinning the product later
+ * is therefore a matter of swapping the values in this file (and tokens.ts, its
+ * typed mirror) - feature code and component code stay untouched.
+ *
+ * `:root` holds the neutral light default skin. `[data-theme="dark"]` overrides
+ * only the semantic color roles; everything else (space, type, radius, motion…)
+ * is theme-independent. Toggle by setting `data-theme` on <html> or <body>.
+ */
+
+:root {
+  /* --- Color: semantic roles (light default) ------------------------------ */
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #eef0f3;
+  --color-border: #d9dde3;
+  --color-border-strong: #b9c0c9;
+  --color-text: #1a1d21;
+  --color-text-muted: #5c6470;
+  --color-text-inverted: #ffffff;
+
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-active: #3730a3;
+  --color-primary-fg: #ffffff;
+  --color-primary-subtle: #eef2ff;
+
+  --color-success: #157f3b;
+  --color-success-fg: #ffffff;
+  --color-success-subtle: #e6f4ea;
+  --color-warning: #b25c00;
+  --color-warning-fg: #ffffff;
+  --color-warning-subtle: #fdf1e3;
+  --color-danger: #c02b2b;
+  --color-danger-fg: #ffffff;
+  --color-danger-subtle: #fbeaea;
+
+  --color-focus-ring: #4f46e5;
+  --color-overlay: rgba(15, 18, 22, 0.45);
+
+  /* --- Sidebar: gradient surface + on-gradient color roles ----------------- *
+   * The sidebar paints a per-theme gradient (`--gradient-sidebar`) and remaps
+   * the semantic color roles within its scope (see AppShell.module.css) so all
+   * sidebar children read light-on-color without any per-component CSS. Only
+   * `--gradient-sidebar` is overridden per theme; the white-alpha on-gradient
+   * tokens below work on every (sufficiently saturated/dark) gradient, so they
+   * live once in `:root`. Popovers that portal OUT of the sidebar (Menu, Modal,
+   * the collapsed-rail flyout) escape this scope and use the normal page roles. */
+  --gradient-sidebar: linear-gradient(
+    168deg,
+    #4f46e5 0%,
+    #7c3aed 58%,
+    #6d28d9 100%
+  );
+  --color-sidebar-fg: rgba(255, 255, 255, 0.92);
+  --color-sidebar-fg-muted: rgba(255, 255, 255, 0.62);
+  --color-sidebar-surface: rgba(255, 255, 255, 0.1); /* frosted controls */
+  --color-sidebar-popover: rgba(17, 19, 34, 0.96); /* opaque in-scope menus */
+  --color-sidebar-hover: rgba(255, 255, 255, 0.14);
+  --color-sidebar-active: rgba(255, 255, 255, 0.22);
+  --color-sidebar-border: rgba(255, 255, 255, 0.16);
+  --color-sidebar-border-strong: rgba(255, 255, 255, 0.3);
+  --color-sidebar-focus: rgba(255, 255, 255, 0.9);
+
+  /* Vivid 2-hue accent gradient for filled buttons. Overridden per theme so it
+     always reads against --color-primary-fg. */
+  --gradient-accent: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+
+  /* --- Spacing: 4px scale -------------------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem; /* 4px  */
+  --space-2: 0.5rem; /*  8px  */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /*    16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /*  24px */
+  --space-7: 2rem; /*    32px */
+  --space-8: 2.5rem; /*  40px */
+  --space-9: 3rem; /*    48px */
+  --space-10: 4rem; /*   64px */
+  --space-11: 5rem; /*   80px */
+  --space-12: 6rem; /*   96px */
+
+  /* --- Typography ---------------------------------------------------------- */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  /* Brand wordmark face. Intentionally NOT redefined by any [data-font] block,
+     so "Mnemosyne" always renders in Space Grotesk regardless of the font a user
+     picks for the rest of the app. */
+  --font-brand: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --text-xs: 0.75rem; /*  12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-md: 1rem; /*     16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.375rem; /* 22px */
+  --text-2xl: 1.75rem; /* 28px */
+  --text-3xl: 2.25rem; /* 36px */
+  --text-4xl: 2.75rem; /* 44px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* --- Touch targets ------------------------------------------------------- *
+   * Minimum hit area for interactive controls on coarse pointers (mobile). Form
+   * inputs and primary actions adopt this as a `min-height` below the `md`
+   * breakpoint (see Input/Select/Button/IconButton). */
+  --touch-target-min: 2.75rem; /* 44px */
+
+  /* --- Radii --------------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* --- Elevation / shadows ------------------------------------------------- */
+  --shadow-1: 0 1px 2px rgba(15, 18, 22, 0.08);
+  --shadow-2: 0 4px 12px rgba(15, 18, 22, 0.1);
+  --shadow-3: 0 12px 32px rgba(15, 18, 22, 0.16);
+
+  /* --- Z-index layers ------------------------------------------------------ */
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-overlay: 1100;
+  --z-modal: 1200;
+  --z-toast: 1300;
+
+  /* --- Breakpoints (documented constants; mirror in tokens.ts) ------------- *
+   * --bp-sm: 480px   --bp-md: 768px   --bp-lg: 1024px   --bp-xl: 1280px
+   * Use these widths in component @media queries; keep them in sync with the
+   * BREAKPOINTS map in tokens.ts. */
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* --- Motion -------------------------------------------------------------- */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0.1, 1);
+}
+
+[data-theme="dark"] {
+  /* Dark skin overrides ONLY the semantic color roles. */
+  --color-bg: #0e1116;
+  --color-surface: #161b22;
+  --color-surface-raised: #1c232c;
+  --color-surface-sunken: #0b0e13;
+  --color-border: #2b313a;
+  --color-border-strong: #3b424d;
+  --color-text: #e6e9ee;
+  --color-text-muted: #98a1ad;
+  --color-text-inverted: #0e1116;
+
+  --color-primary: #818cf8;
+  --color-primary-hover: #a5b0ff;
+  --color-primary-active: #6b76e0;
+  --color-primary-fg: #0e1116;
+  --color-primary-subtle: #1e2547;
+
+  --color-success: #4ade80;
+  --color-success-fg: #0e1116;
+  --color-success-subtle: #14301f;
+  --color-warning: #fbbf24;
+  --color-warning-fg: #0e1116;
+  --color-warning-subtle: #3a2a0c;
+  --color-danger: #f87171;
+  --color-danger-fg: #0e1116;
+  --color-danger-subtle: #3a1717;
+
+  --color-focus-ring: #a5b0ff;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Deep indigo fading to the near-black canvas. */
+  --gradient-sidebar: linear-gradient(
+    180deg,
+    #232a52 0%,
+    #161b2e 55%,
+    #0e1116 100%
+  );
+  --gradient-accent: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ─── Nord - cool arctic blue-grey (dark) ────────────────────────────────── */
+[data-theme="nord"] {
+  --color-bg: #2e3440;
+  --color-surface: #3b4252;
+  --color-surface-raised: #434c5e;
+  --color-surface-sunken: #272c36;
+  --color-border: #434c5e;
+  --color-border-strong: #4c566a;
+  --color-text: #eceff4;
+  --color-text-muted: #abb4c2;
+  --color-text-inverted: #2e3440;
+
+  --color-primary: #88c0d0;
+  --color-primary-hover: #8fbcbb;
+  --color-primary-active: #81a1c1;
+  --color-primary-fg: #2e3440;
+  --color-primary-subtle: #3b4a52;
+
+  --color-success: #a3be8c;
+  --color-success-fg: #2e3440;
+  --color-success-subtle: #3a4637;
+  --color-warning: #ebcb8b;
+  --color-warning-fg: #2e3440;
+  --color-warning-subtle: #4a4332;
+  --color-danger: #bf616a;
+  --color-danger-fg: #eceff4;
+  --color-danger-subtle: #4a3236;
+
+  --color-focus-ring: #88c0d0;
+  --color-overlay: rgba(20, 24, 32, 0.6);
+
+  /* Frost-tinted polar night slate. */
+  --gradient-sidebar: linear-gradient(
+    168deg,
+    #4c566a 0%,
+    #3b4252 58%,
+    #2e3440 100%
+  );
+  --gradient-accent: linear-gradient(135deg, #88c0d0 0%, #81a1c1 100%);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ─── Dracula - vivid purple/pink (dark) ─────────────────────────────────── */
+[data-theme="dracula"] {
+  --color-bg: #282a36;
+  --color-surface: #343746;
+  --color-surface-raised: #3c3f51;
+  --color-surface-sunken: #21222c;
+  --color-border: #44475a;
+  --color-border-strong: #565a72;
+  --color-text: #f8f8f2;
+  --color-text-muted: #8b93b3;
+  --color-text-inverted: #282a36;
+
+  --color-primary: #bd93f9;
+  --color-primary-hover: #caa9fa;
+  --color-primary-active: #a87ef0;
+  --color-primary-fg: #282a36;
+  --color-primary-subtle: #3a3253;
+
+  --color-success: #50fa7b;
+  --color-success-fg: #282a36;
+  --color-success-subtle: #1f3a28;
+  --color-warning: #f1fa8c;
+  --color-warning-fg: #282a36;
+  --color-warning-subtle: #3f4226;
+  --color-danger: #ff5555;
+  --color-danger-fg: #f8f8f2;
+  --color-danger-subtle: #3f2630;
+
+  --color-focus-ring: #bd93f9;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Comment-purple into the deep background. */
+  --gradient-sidebar: linear-gradient(
+    168deg,
+    #6d5fa6 0%,
+    #44475a 60%,
+    #282a36 100%
+  );
+  --gradient-accent: linear-gradient(135deg, #bd93f9 0%, #ff79c6 100%);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ─── Solarized - warm low-contrast paper (light) ────────────────────────── */
+[data-theme="solarized"] {
+  --color-bg: #eee8d5;
+  --color-surface: #fdf6e3;
+  --color-surface-raised: #fdf6e3;
+  --color-surface-sunken: #e3dcc4;
+  --color-border: #ded7c0;
+  --color-border-strong: #c7bfa3;
+  --color-text: #586e75;
+  --color-text-muted: #93a1a1;
+  --color-text-inverted: #fdf6e3;
+
+  --color-primary: #268bd2;
+  --color-primary-hover: #1f7ac0;
+  --color-primary-active: #1a6aa8;
+  --color-primary-fg: #fdf6e3;
+  --color-primary-subtle: #dde9f3;
+
+  --color-success: #859900;
+  --color-success-fg: #fdf6e3;
+  --color-success-subtle: #ecefd6;
+  --color-warning: #b58900;
+  --color-warning-fg: #fdf6e3;
+  --color-warning-subtle: #f2ead0;
+  --color-danger: #dc322f;
+  --color-danger-fg: #fdf6e3;
+  --color-danger-subtle: #f7dcd6;
+
+  --color-focus-ring: #268bd2;
+  --color-overlay: rgba(88, 110, 117, 0.32);
+
+  /* Saturated blue easing into cyan (light theme - white text still reads). */
+  --gradient-sidebar: linear-gradient(
+    168deg,
+    #268bd2 0%,
+    #2779a7 55%,
+    #2aa198 100%
+  );
+  --gradient-accent: linear-gradient(135deg, #268bd2 0%, #2aa198 100%);
+}
+
+/* ─── Gruvbox - warm retro earth tones (dark) ────────────────────────────── */
+[data-theme="gruvbox"] {
+  --color-bg: #282828;
+  --color-surface: #3c3836;
+  --color-surface-raised: #504945;
+  --color-surface-sunken: #1d2021;
+  --color-border: #504945;
+  --color-border-strong: #665c54;
+  --color-text: #ebdbb2;
+  --color-text-muted: #a89984;
+  --color-text-inverted: #282828;
+
+  --color-primary: #fabd2f;
+  --color-primary-hover: #fcc644;
+  --color-primary-active: #e0a818;
+  --color-primary-fg: #282828;
+  --color-primary-subtle: #463f23;
+
+  --color-success: #b8bb26;
+  --color-success-fg: #282828;
+  --color-success-subtle: #3a3a1c;
+  --color-warning: #fe8019;
+  --color-warning-fg: #282828;
+  --color-warning-subtle: #46301a;
+  --color-danger: #fb4934;
+  --color-danger-fg: #282828;
+  --color-danger-subtle: #45211c;
+
+  --color-focus-ring: #fabd2f;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Burnt-orange warming into the dark earth tones. */
+  --gradient-sidebar: linear-gradient(
+    168deg,
+    #af3a03 0%,
+    #504945 55%,
+    #282828 100%
+  );
+  --gradient-accent: linear-gradient(135deg, #fabd2f 0%, #fe8019 100%);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/*
+ * Typography skins - independent of color theme. Each overrides ONLY the two
+ * font-family roles; sizes/weights/line-heights stay theme-independent. Web
+ * fonts are loaded in index.html. `[data-font="system"]` (the default) needs no
+ * block - it inherits the native stacks from :root.
+ */
+[data-font="inter"] {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="dm-sans"] {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="grotesk"] {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="serif"] {
+  --font-sans: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="plex"] {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/*
+ * Fixed-width skins - set BOTH font roles to a monospace family so the entire
+ * UI (not just code) renders in a coding font (terminal aesthetic).
+ */
+[data-font="jetbrains"] {
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="ibm-plex-mono"] {
+  --font-sans: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="fira-code"] {
+  --font-sans: "Fira Code", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, monospace;
+}
+[data-font="space-mono"] {
+  --font-sans: "Space Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
+}

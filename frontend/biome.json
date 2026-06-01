@@ -1,0 +1,69 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "root": false,
+  "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "src/**",
+      "*.ts",
+      "*.tsx",
+      "package.json",
+      "tsconfig.json",
+      "biome.json",
+      "!**/node_modules",
+      "!**/dist"
+    ]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "recommended": true,
+        "useSemanticElements": "off"
+      },
+      "correctness": {
+        "noRestrictedElements": {
+          "level": "error",
+          "options": {
+            "elements": {
+              "button": "Raw <button> is banned outside components/ui. Use <Button>/<IconButton> from @/components/ui.",
+              "input": "Raw <input> is banned outside components/ui. Use <Input>/<Checkbox>/<Radio>/<Switch>/<SearchInput> from @/components/ui.",
+              "select": "Raw <select> is banned outside components/ui. Use <Select> from @/components/ui.",
+              "textarea": "Raw <textarea> is banned outside components/ui. Use <Textarea> from @/components/ui.",
+              "a": "Raw action <a> is banned outside components/ui. Use <NavItem> or react-router <Link>, routed through @/components/ui."
+            }
+          }
+        }
+      }
+    }
+  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "javascript": {
+    "formatter": { "quoteStyle": "double" },
+    "globals": [
+      "vi",
+      "describe",
+      "it",
+      "expect",
+      "beforeEach",
+      "afterEach",
+      "beforeAll",
+      "afterAll"
+    ]
+  },
+  "overrides": [
+    {
+      "includes": ["src/components/ui/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noRestrictedElements": "off"
+          }
+        }
+      }
+    }
+  ]
+}

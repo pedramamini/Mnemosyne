@@ -1,0 +1,56 @@
+.cockpit {
+  height: 100%;
+}
+
+/* The controls header stays put as the stream scrolls beneath it. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-dropdown);
+}
+
+/* Altitude toggle on the left, search on the right; wraps on narrow widths. */
+.headerTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+/* The stream/results area gets a bounded height so it scrolls internally. */
+.streamArea {
+  min-height: 24rem;
+  height: min(70vh, 44rem);
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+}
+
+/* Search results scroll on their own, newest-first. */
+.results {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+@media (max-width: 480px) {
+  .search {
+    max-width: none;
+  }
+}

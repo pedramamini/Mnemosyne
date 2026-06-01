@@ -1,0 +1,66 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.item {
+  margin: 0;
+}
+
+/* The whole row is the clickable target: left-aligned, multi-line, full width. */
+.row {
+  justify-content: flex-start;
+  text-align: start;
+  align-items: stretch;
+  white-space: normal;
+  height: auto;
+  min-height: 0;
+  padding-block: var(--space-2);
+}
+
+.selected {
+  background-color: var(--color-surface-sunken);
+}
+
+/* Stretch Button's internal label span so the stacked rows fill the row. */
+.row :global(.label) {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+}
+
+.titleLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Report title - truncate rather than wrap. */
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Search snippet - clamp to two lines. */
+.snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

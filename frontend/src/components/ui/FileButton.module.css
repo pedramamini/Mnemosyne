@@ -1,0 +1,26 @@
+.fileButton {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+/* The trigger is the visible part; show focus there when the hidden input is
+   keyboard-focused. */
+.fileButton:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+/* Visually hidden but still focusable (sr-only), so keyboard users can open
+   the picker and the focus ring lands on the trigger via :focus-within. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

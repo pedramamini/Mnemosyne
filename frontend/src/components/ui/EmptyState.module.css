@@ -1,0 +1,33 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-9) var(--space-5);
+  text-align: center;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-9);
+  height: var(--space-9);
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-full);
+}
+
+.title {
+  margin: 0;
+}
+
+.description {
+  max-width: 28rem;
+}
+
+.action {
+  margin-top: var(--space-3);
+}

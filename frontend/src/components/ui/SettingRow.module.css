@@ -1,0 +1,44 @@
+.row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr);
+  gap: var(--space-4);
+  align-items: start;
+  padding-block: var(--space-4);
+}
+
+/* Divider between consecutive rows (the settings-list look). */
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.labelCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.description {
+  font-size: var(--text-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text-muted);
+}
+
+.control {
+  min-width: 0;
+}
+
+/* Narrow viewports: stack the label above the control. */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+}

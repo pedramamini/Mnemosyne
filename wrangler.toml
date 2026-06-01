@@ -1,0 +1,419 @@
+name = "mnemosyne"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── Scheduled triggers (cron) - added in MNEMO-27 ───────────────────────────
+# The PLATFORM HEARTBEAT only. This single coarse cron wakes the Worker's
+# `scheduled()` handler (src/index.ts), which fans out to the agents that are
+# DUE (src/schedule/fanout.ts) - it does NOT encode any one agent's cadence.
+# Per-agent timing comes from two finer layers: the DO's own `this.schedule`
+# timer (MnemosyneAgent.scheduleNextRun, survives hibernation, §7.1) and the
+# `agents.schedule_cron` column (MNEMO-02) the fan-out reads to decide who runs.
+# Every 15 min is deliberately coarse: it is the safety net that catches a DO
+# evicted before its own timer fired, not the primary clock. NB: cron does NOT
+# fire under `wrangler dev` (§8.5) - use the prod-gated `POST /__dev/cron`
+# trigger route (src/schedule/dev-routes.ts) to simulate the heartbeat locally.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# ─── Binding stubs ──────────────────────────────────────────────────────────
+# Real bindings are added per-phase. Uncomment + fill each in when the owning
+# phase lands. Names are intentionally stable - see
+# docs/crema-architecture-reference.md ("Stack to pin").
+
+# D1 database (DB) - added in MNEMO-02 (schema + migrations)
+[[d1_databases]]
+binding = "DB"
+database_name = "mnemosyne"
+# Placeholder - only needed for remote ops. Local dev/tests key D1 by binding.
+# set via: wrangler d1 create mnemosyne  (then paste the returned id here)
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# KV namespace (SESSIONS) - added in MNEMO-03 (magic-link tokens + sessions)
+[[kv_namespaces]]
+binding = "SESSIONS"
+# Placeholder - local dev/tests key KV by binding. Create the remote namespace
+# with: wrangler kv namespace create SESSIONS  (then paste the returned id here)
+id = "00000000-0000-0000-0000-000000000000"
+
+# KV namespace (SCHEDULE_KV) - added in MNEMO-27. The PLATFORM-SIDE "last run"
+# marker the cron fan-out (src/schedule/fanout.ts) reads to decide if an agent is
+# due, WITHOUT waking its DO just to check (PRD §7.4). Deliberately separate from
+# both the auth SESSIONS namespace and the DO's own `agent_meta` lastRunAt (the
+# DO records its own marker for chaining `this.schedule`; this one is the Worker's
+# dedup so the heartbeat doesn't re-fire an agent that already ran). Keyed by
+# `lastrun:<agentId>` → epoch-ms string.
+[[kv_namespaces]]
+binding = "SCHEDULE_KV"
+# Placeholder - local dev/tests key KV by binding. Create the remote namespace
+# with: wrangler kv namespace create SCHEDULE_KV (then paste the returned id here)
+id = "00000000-0000-0000-0000-000000000000"
+
+# KV namespace (LIMITS) - added in MNEMO-49. Per-account sandbox concurrency-slot
+# leases: one `lease:<accountId>:<leaseId>` key per live container (TTL-expiring),
+# so the admission gate (src/billing/limits.ts + concurrency.ts) can count active
+# sandboxes WITHOUT waking each agent's DO. KV is eventually-consistent → a SOFT
+# cost bound, not a security boundary (PRD §8.4 - the per-agent sandbox is the real
+# isolation boundary; this only bounds cost).
+[[kv_namespaces]]
+binding = "LIMITS"
+# Placeholder - local dev/tests key KV by binding. Create the remote namespace
+# with: wrangler kv namespace create LIMITS  (then paste the returned id here)
+id = "00000000-0000-0000-0000-000000000000"
+
+# R2 bucket (BRAIN_BUCKET) - added in MNEMO-06. The durable layer the per-agent
+# brain FS persists to across sandbox sleeps (§8.4). Reports get their OWN bucket
+# (REPORTS_BUCKET below, MNEMO-25) so report/blob lifecycle + retention can differ
+# from the brain snapshots. Enable R2 object versioning on this bucket as the
+# coarse restore backstop noted in PRD §6.9 (fine-grained per-file diff/restore is
+# git, 07/12).
+[[r2_buckets]]
+binding = "BRAIN_BUCKET"
+bucket_name = "mnemosyne-brains"
+# Placeholder - local dev/tests key R2 by binding. Create the remote bucket with:
+# wrangler r2 bucket create mnemosyne-brains
+
+# R2 bucket (REPORTS_BUCKET) - added in MNEMO-25. The §7.4 "report/PNG blobs"
+# store: the durable home of a published report's markdown + chart PNGs. One R2
+# "prefix" per report (`agents/<agentId>/reports/<reportId>/`) holding `report.md`
+# + `assets/*.png`, so a report is a self-contained object group. Kept SEPARATE
+# from BRAIN_BUCKET (above) so report retention/lifecycle can differ from the
+# brain FS snapshots. D1 holds only the metadata index (no blobs).
+[[r2_buckets]]
+binding = "REPORTS_BUCKET"
+bucket_name = "mnemosyne-reports"
+# Placeholder - local dev/tests key R2 by binding. Create the remote bucket with:
+# wrangler r2 bucket create mnemosyne-reports
+
+# Durable Objects (per-agent AIChatAgent) - added in MNEMO-04
+[[durable_objects.bindings]]
+name = "AGENT"
+class_name = "MnemosyneAgent"
+
+# SQLite-backed DO migration - required for ctx.storage.sql (the agent_meta
+# table + later phases' memory/audit index). Tag is append-only; new DO
+# classes get new tags in later phases (mirrors Crema's v1/v2/… sequence).
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MnemosyneAgent"]
+
+# Cloudflare Sandbox (per-agent Linux container = the agent's computer) - added
+# in MNEMO-06. The SDK ships a Durable-Object class (`Sandbox`, re-exported from
+# src/index.ts) backed by a container; we address one sandbox per agent via the
+# same idFromName(agentId) idiom as the AGENT DO so they map 1:1 (§8.1).
+[[durable_objects.bindings]]
+name = "SANDBOX"
+class_name = "Sandbox"
+
+# Container backing the Sandbox DO. The sandbox is the product's largest cost
+# lever (§8.4 - billing is active-time only), so keep the instance small and cap
+# concurrency. instance_type "basic" is the cost choice; bump to "standard" only
+# if the SDK image OOMs at boot - verify against the real container in the manual
+# checkpoint (the SDK is Beta, PRD §8.1 - do not pin cost behavior untested).
+[[containers]]
+class_name = "Sandbox"
+image = "docker.io/cloudflare/sandbox:0.10.2"
+max_instances = 5
+instance_type = "basic"
+
+# The SDK's Sandbox DO is SQLite-backed - declare it in its own append-only
+# migration tag (v1 owns MnemosyneAgent above; new DO classes get new tags).
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Sandbox"]
+
+# Audit-log DO (per-agent "glass cockpit" stream) - added in MNEMO-20. A
+# DEDICATED namespace, separate from AGENT: one AuditLog instance per agent via
+# env.AUDIT.idFromName(agentId), so the append-only audit index can be queried
+# without waking the agent loop (PRD §7.4/§8.6). The store + FTS5 logic is the
+# untouched src/audit spike; this DO is the production adapter around it.
+[[durable_objects.bindings]]
+name = "AUDIT"
+class_name = "AuditLog"
+
+# AuditLog is SQLite-backed so ctx.storage.sql + FTS5 exist (the spike's append/
+# filter/search runs unchanged on it). Append-only tag: v1=MnemosyneAgent,
+# v2=Sandbox, v3=AuditLog.
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["AuditLog"]
+
+# Group-thread coordinator DO (per group thread) - added in MNEMO-48. A DEDICATED
+# namespace: one ThreadCoordinator instance per group thread via
+# env.THREAD.idFromName(threadId) (same idFromName idiom as AGENT). It fans each
+# inbound to every member agent's cheap Haiku triage gate, collects confidence
+# bids within a debounce window, lets only the top 1-2 reply (floor control),
+# honors @-mention overrides, and prevents agent↔agent runaway (PRD §9.4). Its
+# floor-control state (turn caps, post-speak cooldowns, dedupe) is SQLite-backed.
+[[durable_objects.bindings]]
+name = "THREAD"
+class_name = "ThreadCoordinator"
+
+# ThreadCoordinator is SQLite-backed (thread_meta + floor_state + seen_messages).
+# Append-only tag: v1=MnemosyneAgent, v2=Sandbox, v3=AuditLog, v4=ThreadCoordinator.
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["ThreadCoordinator"]
+
+# Workers AI (zero-secret LLM default) - added in MNEMO-13. Backs the free
+# `@cf/qwen/qwen3-30b-a3b-fp8` model the getModel() resolver returns when an
+# account has no BYOK profile (PRD §7.2). No account id / secret to provision.
+[ai]
+binding = "AI"
+# AI bindings always proxy to remote (no local emulation); flag it explicitly so
+# `wrangler dev` / tests don't warn. Tests never invoke inference - getModel only
+# CONSTRUCTS the model client (a stub AI binding is injected in test/llm-*.test.ts).
+remote = true
+
+# ─── AI Gateway routing config (MNEMO-14) ────────────────────────────────────
+# Route every BYOK provider call (OpenRouter/Anthropic/OpenAI) through a
+# Cloudflare AI Gateway for response caching, request logs, and per-user spend
+# caps (PRD §7.2). gatewayBaseUrl() (src/llm/gateway.ts) builds
+#   https://gateway.ai.cloudflare.com/v1/{AI_GATEWAY_ACCOUNT_ID}/{AI_GATEWAY_NAME}/{provider}
+# when AI_GATEWAY_ACCOUNT_ID is non-empty; an empty value means "hit the provider
+# directly" (no gateway), mirroring Crema's gateway-when-configured pattern.
+# Fill AI_GATEWAY_ACCOUNT_ID with your Cloudflare account id to enable it.
+[vars]
+AI_GATEWAY_ACCOUNT_ID = ""
+AI_GATEWAY_NAME = "mnemosyne"
+
+# APP_BASE_URL (MNEMO-03) - public origin used to build the magic-link callback
+# URL and the report deep-link in notification emails (MNEMO-28:
+# .../agents/:id/reports/:reportId). This dev/test default is overridden
+# per-environment for the deployed Worker (set it to the real public origin).
+APP_BASE_URL = "http://localhost:8787"
+
+# ENVIRONMENT (MNEMO-27) - gates the dev-only schedule trigger routes
+# (src/schedule/dev-routes.ts: POST /__dev/cron, POST /agents/:id/__dev/run).
+# They exist because cron does NOT fire under `wrangler dev` (§8.5) and MUST
+# NEVER be reachable in production. Any value other than "production" enables
+# them; the deployed Worker MUST set this to "production" (e.g. per-environment
+# override) so the triggers are inert in prod.
+ENVIRONMENT = "development"
+
+# Web-search backend (MNEMO-17). Provider-neutral placeholders - empty means
+# "search not configured" and webSearch returns a typed error. Fill these to
+# wire a backend WITHOUT touching tool code (src/tools/web/searchTools.ts):
+# WEB_SEARCH_PROVIDER names the adapter, WEB_SEARCH_ENDPOINT is the search API
+# URL. The matching key is a SECRET, not a var (see below).
+WEB_SEARCH_PROVIDER = ""
+WEB_SEARCH_ENDPOINT = ""
+
+# TWILIO_API_BASE (MNEMO-44) - base URL of the Twilio REST API the messaging
+# channel (src/messaging/TwilioSmsChannel.ts) posts outbound SMS to. A plain var
+# so it can be repointed at a Twilio test/mock host without a code change; the
+# Twilio Programmable Messaging endpoint is built as
+# `${TWILIO_API_BASE}/2010-04-01/Accounts/${SID}/Messages.json`. Track H is a
+# paid per-agent add-on (PRD §9) - these are inert until a number is provisioned.
+TWILIO_API_BASE = "https://api.twilio.com"
+
+# MESSAGING_SMS_GROUPS (MNEMO-48) - the "clear flag" gating SMS group threads (PRD
+# §9.4). SMS has NO native group thread (MNEMO-44 capabilities.group=false), so the
+# inbound gateway (src/messaging/gateway.ts) only derives an app-side group threadId
+# from the participant set when this is "enabled"; anything else keeps 1:1 as the
+# default. Off until group SMS is provider-supported. A group-capable transport that
+# carries its OWN native thread id routes to the coordinator regardless of this flag.
+MESSAGING_SMS_GROUPS = ""
+
+# KEY_ENCRYPTION_SECRET (Wrangler SECRET, not a var) is the AES-GCM master key
+# for BYOK secret custody (src/llm/secrets.ts) - it encrypts every stored key at
+# rest and is the ONLY thing that can decrypt them. It MUST NEVER be committed.
+# Provision it per environment with:
+#   wrangler secret put KEY_ENCRYPTION_SECRET
+
+# WEB_SEARCH_API_KEY (Wrangler SECRET, not a var) is the web-search backend's API
+# key (MNEMO-17). Provider-neutral - paired with WEB_SEARCH_PROVIDER/ENDPOINT in
+# [vars] above. Provision it per environment with:
+#   wrangler secret put WEB_SEARCH_API_KEY
+
+# TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN (Wrangler SECRETS, not vars) are the
+# Twilio credentials the messaging channel (src/messaging/TwilioSmsChannel.ts)
+# uses for HTTP Basic auth on outbound SMS AND to validate the X-Twilio-Signature
+# on inbound webhooks (MNEMO-44, PRD §9.3/§9.6). They are SECRETS - never commit
+# them; the plain TWILIO_API_BASE lives in [vars] above. Provision per environment:
+#   wrangler secret put TWILIO_ACCOUNT_SID
+#   wrangler secret put TWILIO_AUTH_TOKEN
+
+# SELF service binding (Worker → itself; tool catalog) - added in MNEMO-15 / MNEMO-16
+# [[services]]
+# binding = "SELF"
+# service = "mnemosyne"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Deploy environments (MNEMO-50, PRD §3) - staging + production
+# ═══════════════════════════════════════════════════════════════════════════════
+# The env model is NO SHARED STATE: each deploy target gets its OWN D1 database, KV
+# namespaces, and R2 buckets, with environment-specific ids/names. A bug or a stray
+# migration in staging can NEVER touch production data. The top-level config above
+# stays the LOCAL dev / test target (`wrangler dev`, the vitest pool) and keeps the
+# placeholder ids that local emulation keys by binding.
+#
+# Inheritable keys (main, compatibility_date/flags, [[migrations]], [triggers]) are
+# inherited by every environment - only the NON-inheritable bindings (D1/KV/R2/DO/
+# containers/AI/vars) are redeclared per env below. Create the real resources per
+# env (see SECRETS.md + docs/RELEASE.md) and paste the returned ids over the
+# placeholders. Secrets are NEVER in this file - set them with
+# `wrangler secret put <NAME> --env <staging|production>`.
+#
+# Deploy:  wrangler deploy --env staging   |   wrangler deploy --env production
+# (the `release:staging` / `release:prod` npm scripts run checks + migrations first).
+
+# ─── staging ─────────────────────────────────────────────────────────────────
+[env.staging]
+name = "mnemosyne-staging"
+
+# Single-origin SPA hosting: serve the built frontend (frontend/dist) from the same
+# Worker as the API. Real asset files are served before the Worker; everything else
+# runs the Worker, which serves the SPA shell on browser navigations (see the
+# Sec-Fetch-Mode middleware in src/index.ts). Worker-deploy glue added post-build.
+[env.staging.assets]
+directory = "frontend/dist"
+binding = "ASSETS"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "mnemosyne-staging"
+# wrangler d1 create mnemosyne-staging  → paste the returned id here
+database_id = "9a93c4d9-b426-4b6f-89ea-60b9f9741c30"
+migrations_dir = "migrations"
+
+[[env.staging.kv_namespaces]]
+binding = "SESSIONS"
+# wrangler kv namespace create SESSIONS --env staging
+id = "555d4f52ea24429ca0c376f2eb861c1d"
+
+[[env.staging.kv_namespaces]]
+binding = "SCHEDULE_KV"
+# wrangler kv namespace create SCHEDULE_KV --env staging
+id = "df88d668a1d74e5f94b3128e1e128d9e"
+
+[[env.staging.kv_namespaces]]
+binding = "LIMITS"
+# wrangler kv namespace create LIMITS --env staging
+id = "f0fc5b3259b248fa8b3ed6c2f38c3d86"
+
+[[env.staging.r2_buckets]]
+binding = "BRAIN_BUCKET"
+bucket_name = "mnemosyne-brains-staging"
+# wrangler r2 bucket create mnemosyne-brains-staging
+
+[[env.staging.r2_buckets]]
+binding = "REPORTS_BUCKET"
+bucket_name = "mnemosyne-reports-staging"
+# wrangler r2 bucket create mnemosyne-reports-staging
+
+[[env.staging.durable_objects.bindings]]
+name = "AGENT"
+class_name = "MnemosyneAgent"
+
+[[env.staging.durable_objects.bindings]]
+name = "SANDBOX"
+class_name = "Sandbox"
+
+[[env.staging.durable_objects.bindings]]
+name = "AUDIT"
+class_name = "AuditLog"
+
+[[env.staging.durable_objects.bindings]]
+name = "THREAD"
+class_name = "ThreadCoordinator"
+
+[[env.staging.containers]]
+class_name = "Sandbox"
+image = "docker.io/cloudflare/sandbox:0.10.2"
+max_instances = 5
+instance_type = "basic"
+
+[env.staging.ai]
+binding = "AI"
+remote = true
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+# Real deployed origin (the custom domain staging.mnemosyne.app is not configured).
+# Magic-link callbacks + report deep-links are built from this, so it MUST be the
+# origin the browser actually reaches.
+APP_BASE_URL = "https://mnemosyne-staging.smashlabs.workers.dev"
+AI_GATEWAY_ACCOUNT_ID = ""
+AI_GATEWAY_NAME = "mnemosyne-staging"
+# Keyless DuckDuckGo HTML backend so agents can research with no signup/secret.
+# Swap to a keyed provider (Brave/Tavily/Serper/Exa) by setting these two + the
+# WEB_SEARCH_API_KEY secret; the tool adapter branches on this value.
+WEB_SEARCH_PROVIDER = "duckduckgo"
+WEB_SEARCH_ENDPOINT = ""
+TWILIO_API_BASE = "https://api.twilio.com"
+MESSAGING_SMS_GROUPS = ""
+
+# ─── production ──────────────────────────────────────────────────────────────
+[env.production]
+name = "mnemosyne"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "mnemosyne"
+# wrangler d1 create mnemosyne  → paste the returned id here
+database_id = "22222222-2222-2222-2222-222222222222"
+migrations_dir = "migrations"
+
+[[env.production.kv_namespaces]]
+binding = "SESSIONS"
+# wrangler kv namespace create SESSIONS --env production
+id = "22222222222222222222222222222221"
+
+[[env.production.kv_namespaces]]
+binding = "SCHEDULE_KV"
+# wrangler kv namespace create SCHEDULE_KV --env production
+id = "22222222222222222222222222222222"
+
+[[env.production.kv_namespaces]]
+binding = "LIMITS"
+# wrangler kv namespace create LIMITS --env production
+id = "22222222222222222222222222222223"
+
+[[env.production.r2_buckets]]
+binding = "BRAIN_BUCKET"
+bucket_name = "mnemosyne-brains"
+# wrangler r2 bucket create mnemosyne-brains
+
+[[env.production.r2_buckets]]
+binding = "REPORTS_BUCKET"
+bucket_name = "mnemosyne-reports"
+# wrangler r2 bucket create mnemosyne-reports
+
+[[env.production.durable_objects.bindings]]
+name = "AGENT"
+class_name = "MnemosyneAgent"
+
+[[env.production.durable_objects.bindings]]
+name = "SANDBOX"
+class_name = "Sandbox"
+
+[[env.production.durable_objects.bindings]]
+name = "AUDIT"
+class_name = "AuditLog"
+
+[[env.production.durable_objects.bindings]]
+name = "THREAD"
+class_name = "ThreadCoordinator"
+
+[[env.production.containers]]
+class_name = "Sandbox"
+image = "docker.io/cloudflare/sandbox:0.10.2"
+max_instances = 5
+instance_type = "basic"
+
+[env.production.ai]
+binding = "AI"
+remote = true
+
+[env.production.vars]
+ENVIRONMENT = "production"
+APP_BASE_URL = "https://mnemosyne.app"
+AI_GATEWAY_ACCOUNT_ID = ""
+AI_GATEWAY_NAME = "mnemosyne"
+WEB_SEARCH_PROVIDER = ""
+WEB_SEARCH_ENDPOINT = ""
+TWILIO_API_BASE = "https://api.twilio.com"
+MESSAGING_SMS_GROUPS = ""

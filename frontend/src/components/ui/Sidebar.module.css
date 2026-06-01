@@ -1,0 +1,45 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+.account {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Icon-rail mode: tighten + center so the glyph, nav icons, and avatars stack
+   cleanly in the narrow rail. */
+.collapsed .header {
+  justify-content: center;
+  padding: var(--space-3) var(--space-2);
+}
+
+.collapsed .nav {
+  padding: var(--space-2) var(--space-1);
+  align-items: center;
+}
+
+.collapsed .account {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) var(--space-1);
+}

@@ -1,0 +1,23 @@
+.state {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+/* Ghost Button restyled into a left-aligned, multi-line list row. */
+.row {
+  justify-content: flex-start;
+  text-align: left;
+  height: auto;
+  min-height: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.row[data-active] {
+  background-color: var(--color-primary-subtle);
+}
+
+.rowInner {
+  width: 100%;
+  min-width: 0;
+}

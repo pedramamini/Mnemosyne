@@ -1,0 +1,15 @@
+/* Full-viewport centered state for the magic-link callback (spinner / error). */
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: var(--color-bg);
+}
+
+.card {
+  width: 100%;
+  max-width: 26rem;
+  text-align: center;
+}

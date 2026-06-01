@@ -1,0 +1,11 @@
+/* Layout is handled by <ResponsiveMasterDetail>; these only tune the panes. */
+
+/* The commit list scrolls within the master pane when history grows long. */
+.listPane {
+  overflow: auto;
+}
+
+/* min-width:0 lets the diff body scroll horizontally instead of overflowing. */
+.diffPane {
+  min-width: 0;
+}

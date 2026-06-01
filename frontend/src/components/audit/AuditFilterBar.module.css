@@ -1,0 +1,36 @@
+.controls {
+  width: 100%;
+}
+
+/* Event-type groups laid out as wrapping columns. */
+.typeGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-5);
+}
+
+.typeGroup {
+  min-width: 9rem;
+}
+
+.field {
+  min-width: 12rem;
+}
+
+/* Desktop shows the controls inline; the mobile trigger is hidden. */
+.inline {
+  display: block;
+}
+.mobileTrigger {
+  display: none;
+}
+
+/* Below the md breakpoint, collapse into the "Filters" sheet (Drawer). */
+@media (max-width: 768px) {
+  .inline {
+    display: none;
+  }
+  .mobileTrigger {
+    display: block;
+  }
+}

@@ -1,0 +1,5 @@
+/* Bound the conversation browser so the rail + transcript scroll within the tab
+   rather than growing the page unboundedly. */
+.browser {
+  min-height: 24rem;
+}

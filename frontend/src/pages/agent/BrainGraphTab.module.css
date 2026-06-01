@@ -1,0 +1,14 @@
+/* BrainGraphTab (MNEMO-40) - sizing for the force-graph canvas surface. */
+
+.canvasPanel {
+  /* A tall, bounded surface so the force layout has room but never runs away. */
+  height: min(70vh, 620px);
+  overflow: hidden;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}

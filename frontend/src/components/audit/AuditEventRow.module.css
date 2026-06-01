@@ -1,0 +1,112 @@
+/* One event line: type icon rail + body, with a left tint keyed to the level. */
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border-left: 3px solid transparent;
+}
+
+.row:hover {
+  background: var(--color-surface-sunken);
+}
+
+/* Subtle per-level tint on the left rail (the altitude cue). */
+.row[data-level="milestone"] {
+  border-left-color: var(--color-primary);
+}
+.row[data-level="error"] {
+  border-left-color: var(--color-danger);
+}
+.row[data-level="info"] {
+  border-left-color: var(--color-border-strong);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 1px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.summary {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Keep the timestamp from shrinking/wrapping beside a long summary. */
+.time {
+  flex: none;
+  white-space: nowrap;
+}
+
+.detail {
+  margin-top: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.detailCode {
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.reasoning {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* "View report" deep-link - a subtle, button-height inline link in the action row. */
+.reportLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.reportLink:hover {
+  text-decoration: underline;
+  background: var(--color-surface-sunken);
+}
+
+/* Generic payload key/value list inside the "Show the work" disclosure. */
+.metaList {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  margin: 0;
+}
+
+.metaList dt {
+  margin: 0;
+}
+
+.metaList dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.metaValue {
+  overflow-wrap: anywhere;
+}
