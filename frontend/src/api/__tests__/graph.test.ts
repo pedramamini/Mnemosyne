@@ -49,13 +49,29 @@ describe("graph - normalizeSubgraph (pure)", () => {
     expect(byId["/brain/notes/a.md"].title).toBe("Note A");
     expect(byId["/brain/notes/a.md"].neuronType).toBe("note");
     expect(byId["/brain/notes/a.md"].degree).toBe(2); // two outgoing edges
+    expect(byId["/brain/notes/a.md"].group).toBe("notes"); // folder group
     expect(byId["/brain/tools/t.md"].neuronType).toBe("tool");
     expect(byId["/brain/tools/t.md"].title).toBe("t"); // basename, .md stripped
+    expect(byId["/brain/tools/t.md"].group).toBe("tools");
     expect(byId["/brain/reports/r.md"].neuronType).toBe("report");
     // dangling target keyed `dangling:<slug>` so it lines up with the leaf node
     expect(byId["dangling:ghost"].neuronType).toBe("dangling");
     expect(byId["dangling:ghost"].path).toBe("");
+    expect(byId["dangling:ghost"].group).toBe("dangling");
     expect(edges[1].target).toBe("dangling:ghost");
+  });
+
+  it("groups nested folders by their full relative dir, top-level notes as 'root'", () => {
+    const { nodes } = normalizeSubgraph({
+      nodes: [
+        neuron({ path: "/brain/notes/people/acme.md", slug: "acme" }),
+        neuron({ path: "/brain/top.md", slug: "top" }),
+      ],
+      edges: [],
+    });
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    expect(byId["/brain/notes/people/acme.md"].group).toBe("notes/people");
+    expect(byId["/brain/top.md"].group).toBe("root");
   });
 
   it("labels a path outside notes/tools/reports as 'other'", () => {
@@ -105,15 +121,31 @@ describe("graph - fetch-backed reads", () => {
     expect(url).toContain("limit=5");
   });
 
-  it("getBrainGraph returns an empty map + true size when no start slug", async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse({ neurons: 9, synapses: 9, dangling: 0 }),
-    );
-    const g = await getBrainGraph("a1", { start: "   " }); // blank trims to none
-    expect(g.nodes).toEqual([]);
-    expect(g.edges).toEqual([]);
+  it("getBrainGraph fetches size + the WHOLE graph (no start param) when no start slug", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/brain/size")) {
+        return Promise.resolve(
+          jsonResponse({ neurons: 9, synapses: 9, dangling: 0 }),
+        );
+      }
+      return Promise.resolve(
+        jsonResponse({
+          nodes: [neuron({ path: "/brain/notes/a.md", slug: "a", title: "A" })],
+          edges: [],
+        }),
+      );
+    });
+    const g = await getBrainGraph("a1", { start: "   " }); // blank trims to no start
     expect(g.brainSize).toEqual({ neurons: 9, synapses: 9 });
-    expect(fetchMock).toHaveBeenCalledTimes(1); // size only, no subgraph fetch
+    expect(g.nodes).toHaveLength(1);
+    expect(g.nodes[0].title).toBe("A");
+    // The graph fetch is the whole-brain mode: it carries NO `start` query param.
+    const graphUrl = fetchMock.mock.calls
+      .map((c) => String(c[0]))
+      .find((u) => u.includes("/brain/graph"));
+    expect(graphUrl).toBeDefined();
+    expect(graphUrl).not.toContain("start=");
+    expect(fetchMock).toHaveBeenCalledTimes(2); // size + whole-graph fetch
   });
 
   it("getBrainGraph fetches size + subgraph and normalizes when given a start", async () => {

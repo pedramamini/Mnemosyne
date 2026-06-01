@@ -52,6 +52,20 @@ export function selectGraphData(graph: BrainGraph): GraphRenderData {
   };
 }
 
+/**
+ * Drop isolated (degree-0) neurons - the "Hide unconnected" view. A node with
+ * degree 0 has no incident links, so removing it can never orphan a link (every
+ * link's endpoints have degree ≥ 1); `links` therefore pass through untouched.
+ * `brainSize` is the whole-brain total and is preserved (the badge still shows
+ * true totals even when the canvas hides isolated nodes). Pure - no React.
+ */
+export function filterConnected(data: GraphRenderData): GraphRenderData {
+  return {
+    ...data,
+    nodes: data.nodes.filter((n) => (n.degree ?? 0) > 0),
+  };
+}
+
 /** Options forwarded to {@link getBrainGraph} (start slug + BFS depth). */
 export interface UseBrainGraphOpts {
   start?: string;

@@ -143,3 +143,32 @@ test("brainSize returns exact counts; brainSizeScalar = neurons + synapses", () 
   assert.deepEqual(graph.brainSize(), { neurons: 3, synapses: 4, dangling: 1 });
   assert.equal(graph.brainSizeScalar(), 7);
 });
+
+test("wholeGraph returns EVERY neuron + synapse, surfacing dangling D as a leaf", () => {
+  const graph = fresh();
+  buildGraph(graph);
+
+  const { nodes, edges } = graph.wholeGraph();
+  // All real neurons (A,B,C) plus the dangling Delta leaf - no start node needed.
+  assert.deepEqual(slugs(nodes), ["alpha", "beta", "delta", "gamma"]);
+  const delta = nodes.find((n) => n.slug === "delta");
+  assert.equal(delta?.dangling, true);
+  assert.equal(delta?.path, null); // "wanted but unwritten"
+  // Every synapse is present: A→B, A→C, A→Delta, B→C.
+  assert.equal(edges.length, 4);
+  assert.ok(edges.some((e) => e.dst_slug === "delta" && e.dst_path == null));
+});
+
+test("wholeGraph respects maxNodes and never emits an edge to a capped-out node", () => {
+  const graph = fresh();
+  buildGraph(graph);
+
+  // Cap to a single real neuron (the newest-updated wins; tie-break is arbitrary).
+  const capped = graph.wholeGraph({ maxNodes: 1 });
+  const real = capped.nodes.filter((n) => !n.dangling);
+  assert.equal(real.length, 1);
+  // Every emitted edge's source survived the cap - no orphan edges to missing nodes.
+  for (const e of capped.edges) {
+    assert.ok(real.some((n) => n.path === e.src_path));
+  }
+});

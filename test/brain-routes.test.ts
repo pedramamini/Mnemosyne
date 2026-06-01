@@ -120,6 +120,18 @@ describe("brain routes - read happy paths (no sandbox warm)", () => {
     expect(size.synapses).toBe(0);
   });
 
+  it("GET /brain/graph with no start returns the whole (empty) brain", async () => {
+    // No `start` → whole-graph mode (not a 400). A fresh brain yields empty
+    // arrays, but the route still answers 200 without warming the sandbox.
+    const res = await call("GET", `/agents/${agentId}/brain/graph`, {
+      cookie: owner.cookie,
+    });
+    expect(res.status).toBe(200);
+    const graph = (await res.json()) as { nodes: unknown[]; edges: unknown[] };
+    expect(Array.isArray(graph.nodes)).toBe(true);
+    expect(Array.isArray(graph.edges)).toBe(true);
+  });
+
   it("GET /brain/graph traverses from a start slug, clamping depth to the cap", async () => {
     // depth=999 is clamped to GRAPH_CAPS.maxDepth server-side; an unknown start
     // yields an empty subgraph but the route still answers 200.
@@ -150,7 +162,7 @@ describe("brain routes - boundary validation (400 before the DO)", () => {
   // the failure is validation (not ownership). Covers the safeParse branches the
   // canonical in-DO guards would otherwise only reject at 500-across-RPC.
   const bad: Array<[string, string, unknown?]> = [
-    ["GET", "brain/graph"], // missing required `start`
+    ["GET", "brain/graph?start="], // present-but-empty start (whole-graph is `start` ABSENT)
     ["GET", "brain/search"], // missing required `q`
     ["GET", "brain/file"], // missing required `path`
     ["DELETE", "brain/file"], // missing required `path`

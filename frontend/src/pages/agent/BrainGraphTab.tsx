@@ -1,9 +1,13 @@
-import { RefreshCw } from "lucide-react";
+import { Filter, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { GraphNode } from "@/api/graph";
 import { BrainGraphCanvas } from "@/components/graph/BrainGraphCanvas";
 import { BrainSizeBadge } from "@/components/graph/BrainSizeBadge";
-import { useBrainGraph } from "@/components/graph/useBrainGraph";
+import {
+  filterConnected,
+  useBrainGraph,
+} from "@/components/graph/useBrainGraph";
 import {
   Banner,
   Button,
@@ -38,6 +42,14 @@ export interface BrainGraphTabProps {
 export function BrainGraphTab({ agentId, start }: BrainGraphTabProps) {
   const navigate = useNavigate();
   const { data, loading, error, refetch } = useBrainGraph(agentId, { start });
+  // "Hide unconnected": drop degree-0 (isolated) neurons from the canvas. The
+  // badge still reads whole-brain totals; only the rendered map is filtered.
+  const [connectedOnly, setConnectedOnly] = useState(false);
+  const view = useMemo(
+    () => (connectedOnly ? filterConnected(data) : data),
+    [connectedOnly, data],
+  );
+  const hiddenCount = data.nodes.length - view.nodes.length;
 
   function handleNodeClick(node: GraphNode): void {
     // Deep-link into the Brain explorer (MNEMO-38) focused on this neuron's path.
@@ -80,20 +92,31 @@ export function BrainGraphTab({ agentId, start }: BrainGraphTabProps) {
         </div>
       );
     }
-    if (data.nodes.length === 0) {
+    // Filter is on and it hid everything (a brain of all-isolated neurons).
+    if (connectedOnly && view.nodes.length === 0 && data.nodes.length > 0) {
       return (
         <div className={styles.center}>
           <EmptyState
-            title="Nothing to explore here yet"
-            description="Open a neuron from the Brain tab to map its connections."
+            title="No connected neurons yet"
+            description="Every neuron is still isolated — none link to another yet. Turn off “Connected only” to see them all."
+          />
+        </div>
+      );
+    }
+    if (view.nodes.length === 0) {
+      return (
+        <div className={styles.center}>
+          <EmptyState
+            title="Nothing to map yet"
+            description="The brain has neurons but none could be mapped. Try refreshing."
           />
         </div>
       );
     }
     return (
       <BrainGraphCanvas
-        nodes={data.nodes}
-        links={data.links}
+        nodes={view.nodes}
+        links={view.links}
         onNodeClick={handleNodeClick}
       />
     );
@@ -110,15 +133,33 @@ export function BrainGraphTab({ agentId, start }: BrainGraphTabProps) {
         ) : (
           <span />
         )}
-        <Button
-          size="sm"
-          variant="secondary"
-          leftIcon={<Icon icon={RefreshCw} size="sm" />}
-          onClick={refetch}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
+        <Inline gap="2" align="center">
+          {!loading && !error && data.brainSize.neurons > 0 ? (
+            <Button
+              size="sm"
+              variant={connectedOnly ? "primary" : "secondary"}
+              leftIcon={<Icon icon={Filter} size="sm" />}
+              onClick={() => setConnectedOnly((v) => !v)}
+              aria-pressed={connectedOnly}
+              title={
+                connectedOnly
+                  ? `Showing connected neurons only${hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}`
+                  : "Hide neurons with no connections"
+              }
+            >
+              {connectedOnly ? "Connected only" : "Hide unconnected"}
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant="secondary"
+            leftIcon={<Icon icon={RefreshCw} size="sm" />}
+            onClick={refetch}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+        </Inline>
       </Inline>
 
       <Panel padding="2" className={styles.canvasPanel}>

@@ -1,3 +1,4 @@
+import { Wrench } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -5,8 +6,9 @@ import {
   type ChatMessage,
   messageArtifacts,
   messageText,
+  messageToolUses,
 } from "@/api/conversations";
-import { Avatar } from "@/components/ui";
+import { Avatar, Badge, Icon, Inline } from "@/components/ui";
 import { cx } from "@/components/ui/utils";
 import { HtmlArtifact } from "./HtmlArtifact";
 import styles from "./MessageBubble.module.css";
@@ -46,7 +48,9 @@ function TypingIndicator() {
  * assistant bubble appends a typing indicator (shown alone when nothing has
  * streamed yet).
  *
- * `reasoning`/`tool` parts are intentionally dropped here and surfaced in MNEMO-37.
+ * MNEMO-37: assistant turns lead with a compact row of `data-tool` chips - what the
+ * agent actually did this turn (searched, fetched, ran, wrote) - above the reply.
+ * Native `reasoning` parts still flow through untouched.
  */
 export function MessageBubble({
   message,
@@ -58,6 +62,7 @@ export function MessageBubble({
   const isAssistant = message.role === "assistant";
   const text = messageText(message);
   const artifacts = isAssistant ? messageArtifacts(message) : [];
+  const toolUses = isAssistant ? messageToolUses(message) : [];
 
   return (
     <div className={cx(styles.row, !isAssistant && styles.user)}>
@@ -77,6 +82,27 @@ export function MessageBubble({
       >
         {isAssistant ? (
           <>
+            {toolUses.length > 0 && (
+              <Inline
+                className={styles.tools}
+                gap="1"
+                aria-label="Tools used this turn"
+              >
+                {toolUses.map((tool) => (
+                  <Badge
+                    key={tool.key}
+                    className={styles.tool}
+                    variant="neutral"
+                    appearance="subtle"
+                    size="sm"
+                    title={tool.summary}
+                  >
+                    <Icon icon={Wrench} size="sm" />
+                    {tool.summary}
+                  </Badge>
+                ))}
+              </Inline>
+            )}
             {text && (
               <div className={styles.markdown}>
                 <ReactMarkdown

@@ -9,20 +9,23 @@
  * so it survives hibernation and is resumable - each completed phase is recorded
  * here as the resume cursor, exactly like {@link BuildStatus.completed}.
  *
- * This module is schemas + a default-state factory only; the fixed 5-phase plan
+ * This module is schemas + a default-state factory only; the fixed six-phase plan
  * (labels + mandates) lives in {@link ./plan.ts} and the orchestration on the DO.
  */
 import { z } from "zod";
 
 /**
- * The fixed five-phase spine of the initial deep dive, in execution order. The
+ * The fixed six-phase spine of the initial deep dive, in execution order. The
  * spine is deliberately fixed (not model-planned) so the progress bar is honest
- * and bounded; the agent has full freedom *within* each phase.
+ * and bounded; the agent has full freedom (and a deep step budget) *within* each
+ * phase. The fixed length is the "max depth" guard - the agent goes deep but the
+ * dive is always exactly these phases, never an open-ended loop.
  *
  *  - `orient`        - establish the subject's identity + authoritative sources
  *  - `landscape`     - map the surrounding entities and link them (build the graph)
  *  - `developments`  - timeline of what materially changed recently
  *  - `facets`        - dig into the entity-lens signals that matter most
+ *  - `tooling`       - build, test, and document a self-authored tool for the subject
  *  - `synthesis`     - consolidate, resolve loose ends, set the baseline brief
  */
 export const DeepDivePhaseId = z.enum([
@@ -30,6 +33,7 @@ export const DeepDivePhaseId = z.enum([
   "landscape",
   "developments",
   "facets",
+  "tooling",
   "synthesis",
 ]);
 export type DeepDivePhaseId = z.infer<typeof DeepDivePhaseId>;

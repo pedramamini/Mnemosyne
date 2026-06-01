@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type BrainGraph, normalizeSubgraph, type Subgraph } from "@/api/graph";
-import { selectGraphData } from "../useBrainGraph";
+import { filterConnected, selectGraphData } from "../useBrainGraph";
 
 // Plain unit test for the API→renderer transform (no canvas, no network). Covers
 // both halves of the pipeline: `normalizeSubgraph` (raw MNEMO-09 rows → nodes/edges
@@ -113,5 +113,29 @@ describe("selectGraphData", () => {
       neurons: 2,
       synapses: 1,
     });
+  });
+});
+
+describe("filterConnected", () => {
+  const data = {
+    nodes: [
+      { id: "a", path: "/brain/notes/a.md", degree: 2 },
+      { id: "b", path: "/brain/notes/b.md", degree: 1 },
+      { id: "lonely", path: "/brain/notes/lonely.md", degree: 0 },
+    ],
+    links: [{ source: "a", target: "b" }],
+    brainSize: { neurons: 3, synapses: 1 },
+  };
+
+  it("drops degree-0 (isolated) nodes but keeps links + true brainSize", () => {
+    const filtered = filterConnected(data);
+    expect(filtered.nodes.map((n) => n.id)).toEqual(["a", "b"]);
+    expect(filtered.links).toEqual(data.links); // links untouched
+    expect(filtered.brainSize).toEqual({ neurons: 3, synapses: 1 }); // totals preserved
+  });
+
+  it("does not mutate the input", () => {
+    filterConnected(data);
+    expect(data.nodes).toHaveLength(3);
   });
 });

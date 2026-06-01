@@ -66,7 +66,7 @@ export function buildDeepDivePhasePrompt(input: DeepDivePromptInput): string {
   sections.push(`This phase: ${mandate}`);
 
   sections.push(
-    "Recall first (search and read your existing notes), then research, then write durable, well-linked notes as you go. Keep every claim sourced and dated.",
+    "Recall first (search and read your existing notes), then research, then write durable, well-linked notes as you go. Keep every claim sourced and dated. Work this phase to real depth: you have a generous step budget, so keep pulling threads and following citations until the mandate is genuinely exhausted - don't stop at the first passable result.",
   );
 
   // How the phase ends - every phase exits through the terminator so the harness
@@ -77,7 +77,7 @@ export function buildDeepDivePhasePrompt(input: DeepDivePromptInput): string {
     );
   } else {
     sections.push(
-      "When you've satisfied this phase's mandate, end the run by calling submitFinalReport with a short, plain summary of what you established in THIS phase and the notes you wrote - that summary carries forward into the next phase. Do not pad it; one tight paragraph is enough.",
+      "Only once you've genuinely satisfied this phase's mandate - not before - end the run by calling submitFinalReport with a plain summary of what you established in THIS phase and the notes you wrote; that summary carries forward into the next phase. A few sentences is enough for the summary itself, but it should reflect substantial work, not a token pass.",
     );
   }
 

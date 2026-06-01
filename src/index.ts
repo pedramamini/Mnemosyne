@@ -42,7 +42,13 @@ const MAX_SANDBOX_CMD_LEN = 4096;
  * parse - never trusting the caller for the runaway-graph bound.
  */
 const BrainGraphQuery = z.object({
-  start: z.string().trim().min(1, "start is required"),
+  // Optional: with a `start` slug the route returns a bounded BFS from it; with
+  // no start it returns the WHOLE (capped) brain — the Graph tab's default view.
+  start: z
+    .string()
+    .trim()
+    .min(1, "start must be non-empty when present")
+    .optional(),
   depth: z.coerce.number().int().positive().optional(),
 });
 const BrainSearchQuery = z.object({
@@ -333,7 +339,7 @@ app.route("/", conversationRoutes());
 app.route("/", buildRoutes());
 
 // Onboarding deep-dive API: GET /agents/:agentId/deepdive (read DeepDiveStatus -
-// the 5-phase initial research progress). The dive is kicked off by Build and
+// the 6-phase initial research progress). The dive is kicked off by Build and
 // advances on its own (alarm-driven), so this is read-only progress. Behind
 // requireAuth + an ownership guard (applied inside the sub-app). Mounted before
 // the `/agents/:agentId/*` wildcard below.
@@ -470,6 +476,7 @@ app.post("/agents/:agentId/brain/commit", async (c) => {
 // (the neuron/synapse index) and do NOT warm the sandbox container (PRD §7.4):
 //
 //   GET /agents/:agentId/brain/size                       - brain-size metric
+//   GET /agents/:agentId/brain/graph                      - whole (capped) brain
 //   GET /agents/:agentId/brain/graph?start=<slug>&depth=<n> - bounded BFS subgraph
 //   GET /agents/:agentId/brain/search?q=<term>            - title/slug index search
 //
@@ -500,14 +507,17 @@ app.get("/agents/:agentId/brain/graph", async (c) => {
       400,
     );
   }
+  const stub = getAgentStub(c.env, agentId);
+  // No start → the whole (capped) brain; a start slug → a bounded BFS from it.
+  if (!parsed.data.start) {
+    const graph = await stub.graphWhole({ maxNodes: GRAPH_CAPS.maxNodes });
+    return c.json(graph);
+  }
   const maxDepth = Math.min(
     parsed.data.depth ?? GRAPH_CAPS.defaultMaxDepth,
     GRAPH_CAPS.maxDepth,
   );
-  const graph = await getAgentStub(c.env, agentId).graphTraverse(
-    parsed.data.start,
-    { maxDepth },
-  );
+  const graph = await stub.graphTraverse(parsed.data.start, { maxDepth });
   return c.json(graph);
 });
 

@@ -173,9 +173,11 @@ function templateOverlay(template: AgentTemplate): string {
  * so a clean exit yields a validated `FinalReportData` for MNEMO-24 to render.
  */
 export const DEEP_RESEARCH_OVERLAY = `Deep-research run
-This is an unattended research run - no human is watching to steer you. Work the assignment with the tools available to you: recall from your brain, search and read sources, run shell/Python as needed, and write durable notes as you go.
+This is an unattended research run - no human is watching to steer you, so the depth of the work is on you. Work the assignment hard with every tool available: recall from your brain, search and read sources (open the primary ones, don't stop at a results page), run shell/Python in your sandbox, author your own tools when a task is worth automating, and write durable, well-linked notes as you go.
 
-When - and only when - your research is complete, end the run by calling the submitFinalReport tool exactly once, as your final action. Pass the complete, structured report: a title, a short summary, the body broken into titled sections, the key findings, every source you actually consulted, and your overall confidence (low / medium / high). Do not call any other tool in that final step.
+Go deep and pull threads. When a source raises a new question, a name you don't recognize, or a claim worth verifying, follow it before moving on - that follow-the-thread instinct is the whole point of the run. Cross-check important facts against a second source. You have a large step budget on purpose: a thorough run uses tens of tool calls. Do not stop at the first plausible stopping point - stop when you have genuinely exhausted the assignment, not when you have something passable.
+
+submitFinalReport is the FINISH LINE, not an escape hatch. Call it exactly once, as your final action, and only after the work is genuinely thorough - never to bail out early. Pass the complete, structured report: a title, a short summary, the body broken into titled sections, the key findings, every source you actually consulted, and your overall confidence (low / medium / high). Do not call any other tool in that final step.
 
 Never fabricate, pad, or guess a source - include only sources you genuinely consulted, and say so plainly when the evidence is thin. Do not end the run by simply writing prose: a run that stops without calling submitFinalReport has failed to deliver its report.`;
 

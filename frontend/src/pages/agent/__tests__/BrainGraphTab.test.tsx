@@ -122,6 +122,58 @@ describe("BrainGraphTab", () => {
     );
   });
 
+  it("hides degree-0 neurons when 'Hide unconnected' is toggled, and restores them", async () => {
+    mockGetBrainGraph.mockResolvedValue({
+      nodes: [
+        {
+          id: "/brain/notes/x.md",
+          path: "/brain/notes/x.md",
+          title: "X",
+          neuronType: "note",
+          degree: 1,
+          group: "notes",
+        },
+        {
+          id: "/brain/notes/y.md",
+          path: "/brain/notes/y.md",
+          title: "Y",
+          neuronType: "note",
+          degree: 1,
+          group: "notes",
+        },
+        {
+          id: "/brain/notes/lonely.md",
+          path: "/brain/notes/lonely.md",
+          title: "Lonely",
+          neuronType: "note",
+          degree: 0,
+          group: "notes",
+        },
+      ],
+      edges: [{ source: "/brain/notes/x.md", target: "/brain/notes/y.md" }],
+      brainSize: { neurons: 3, synapses: 1 },
+    });
+    renderTab();
+
+    // All three render by default…
+    expect(await screen.findByTestId("node-count")).toHaveTextContent("3");
+
+    // …toggling "Hide unconnected" drops the degree-0 node (canvas shows 2)…
+    await userEvent.click(
+      screen.getByRole("button", { name: /hide unconnected/i }),
+    );
+    expect(screen.getByTestId("node-count")).toHaveTextContent("2");
+
+    // …and the badge still reflects the whole-brain total.
+    expect(screen.getByText("3 neurons · 1 synapse")).toBeInTheDocument();
+
+    // Toggling back restores all neurons.
+    await userEvent.click(
+      screen.getByRole("button", { name: /connected only/i }),
+    );
+    expect(screen.getByTestId("node-count")).toHaveTextContent("3");
+  });
+
   it("renders the empty-brain state when the graph has zero nodes", async () => {
     mockGetBrainGraph.mockResolvedValue({
       nodes: [],

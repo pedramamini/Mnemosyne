@@ -76,6 +76,23 @@
   color: var(--color-primary);
 }
 
+/* Tool-use trace (MNEMO-37): compact chips of what the agent did this turn,
+   shown above the reply. Wraps; the chip pairs a wrench glyph with the summary. */
+.tools {
+  margin-bottom: var(--space-2);
+}
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  font-weight: var(--font-weight-regular);
+}
+.tool > svg {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
 /* Streaming "typing" indicator: three pulsing dots. */
 .typing {
   display: inline-flex;

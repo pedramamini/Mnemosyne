@@ -10,7 +10,7 @@ import type { MnemosyneAgent } from "../src/agent/index.ts";
 import { createSession, SESSION_COOKIE } from "../src/auth/sessions.ts";
 import { createAccount, createAgent } from "../src/db/index.ts";
 import worker from "../src/index.ts";
-import { generateModel } from "./mock-model.ts";
+import { generateModel, toolThenTextModel } from "./mock-model.ts";
 import { stubSandboxClient } from "./stub-sandbox.ts";
 
 // MNEMO-35/36: multi-thread web conversations live INSIDE the per-agent DO (the
@@ -120,6 +120,67 @@ describe("MnemosyneAgent - web conversations", () => {
       expect(detail?.messages[1].role).toBe("assistant");
       // The thread's recency/preview tracked the latest message.
       expect(detail?.lastMessagePreview).toContain(reply);
+    });
+  });
+
+  it("surfaces the turn's tool calls as data-tool parts (streamed + persisted)", async () => {
+    const { agentId } = await seedAgent();
+    const stub = env.AGENT.get(env.AGENT.idFromName(agentId));
+
+    await runInDurableObject(stub, async (instance: MnemosyneAgent) => {
+      // Drive one real tool round-trip: the model calls runShell, then replies.
+      // The stub sandbox runs the command cleanly (exit 0), so the call lands in
+      // the turn's steps and must become a chat-visible chip.
+      instance.testModelOverride = toolThenTextModel(
+        "runShell",
+        { command: "ls -la" },
+        "Here are the files.",
+      );
+      instance.testSandboxOverride = stubSandboxClient().client;
+
+      const conv = instance.createConversation();
+      const req = new Request(
+        `${BASE}/agents/${agentId}/conversations/${conv.id}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [userMessage("list the files")] }),
+        },
+      );
+
+      const res = await instance.fetch(req);
+      const body = await res.text();
+      // The data-tool part rides the SAME UI-message stream as the text.
+      expect(body).toContain("data-tool");
+      expect(body).toContain("Running a command: ls -la");
+
+      for (
+        let i = 0;
+        i < 50 && (instance.getConversation(conv.id)?.messages.length ?? 0) < 2;
+        i++
+      ) {
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      const assistant = instance.getConversation(conv.id)?.messages[1];
+      const toolParts = (assistant?.parts ?? []).filter(
+        (
+          p,
+        ): p is {
+          type: "data-tool";
+          data: { tool: string; summary: string };
+        } => (p as { type?: string }).type === "data-tool",
+      );
+      expect(toolParts).toHaveLength(1);
+      expect(toolParts[0].data.tool).toBe("runShell");
+      expect(toolParts[0].data.summary).toBe("Running a command: ls -la");
+      // The reply text still persists alongside the chip.
+      expect(
+        (assistant?.parts ?? []).some(
+          (p) =>
+            (p as { type?: string }).type === "text" &&
+            (p as { text?: string }).text === "Here are the files.",
+        ),
+      ).toBe(true);
     });
   });
 });

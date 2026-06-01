@@ -8,7 +8,7 @@ import { generateModel } from "./mock-model.ts";
 import { stubSandboxClient } from "./stub-sandbox.ts";
 
 // The initial deep dive: after Build provisions an agent, it runs a fixed
-// FIVE-phase initial research pass that fills the brain before the agent settles
+// SIX-phase initial research pass that fills the brain before the agent settles
 // into its cadence. Each phase is its own alarm-driven `runHeadless` pass; here we
 // drive the public `runDeepDivePhase` step directly (no alarm clock needed) with a
 // mock model + stub sandbox, and assert the phase cursor advances to completion.
@@ -93,8 +93,8 @@ describe("MnemosyneAgent deep dive", () => {
         await instance.build();
         const afterBuild = instance.getDeepDiveStatus();
 
-        // Drive each phase by hand (the alarm would otherwise fire these). Five
-        // phases → five steps; the fifth finalizes the dive.
+        // Drive each phase by hand (the alarm would otherwise fire these). Six
+        // phases → six steps; the last finalizes the dive.
         const total = afterBuild.phases.length;
         for (let i = 0; i < total; i++) await instance.runDeepDivePhase();
 
@@ -102,14 +102,15 @@ describe("MnemosyneAgent deep dive", () => {
       },
     );
 
-    // Build kicked the dive into `running` with the full 5-phase plan, all pending.
+    // Build kicked the dive into `running` with the full 6-phase plan, all pending.
     expect(result.afterBuild.phase).toBe("running");
-    expect(result.afterBuild.phases).toHaveLength(5);
+    expect(result.afterBuild.phases).toHaveLength(6);
     expect(result.afterBuild.phases.map((p) => p.id)).toEqual([
       "orient",
       "landscape",
       "developments",
       "facets",
+      "tooling",
       "synthesis",
     ]);
     expect(result.afterBuild.phases.every((p) => p.status === "pending")).toBe(
@@ -139,7 +140,7 @@ describe("MnemosyneAgent deep dive", () => {
         instance.completeDiscovery(VALID_SPEC);
 
         await instance.build();
-        // Drive all five phases; the final one finalizes the dive, which arms the
+        // Drive all six phases; the final one finalizes the dive, which arms the
         // nightly dream.
         const total = instance.getDeepDiveStatus().phases.length;
         for (let i = 0; i < total; i++) await instance.runDeepDivePhase();

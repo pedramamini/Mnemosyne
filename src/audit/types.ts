@@ -20,7 +20,7 @@ export type AuditType =
   | "report.generated"
   | "chart.rendered"
   // Onboarding deep-dive phase boundary (milestone - the calm stream narrates
-  // "Phase 2 of 5: Mapping the landscape" as the initial dive advances).
+  // "Phase 2 of 6: Mapping the landscape" as the initial dive advances).
   | "onboarding.phase"
   // Weekly self-review ("Karpathy loop") outcome + the self-iteration it applied.
   | "assessment.completed"

@@ -889,6 +889,11 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
     return this.graph().traverse(startSlug, opts);
   }
 
+  /** Whole brain as one capped subgraph (Graph-tab default). Reads the DO index; no sandbox warm. */
+  graphWhole(opts?: { maxNodes?: number }): Subgraph {
+    return this.graph().wholeGraph(opts);
+  }
+
   /** Edges touching `slug` in `dir`. Reads the DO index; no sandbox warm. */
   graphNeighbors(slug: string, dir?: Direction): SynapseRef[] {
     return this.graph().neighbors(slug, dir);
@@ -2251,6 +2256,26 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
 
     const template = getTemplate(spec.entityType);
 
+    // Surface the provisioning arc in the agent's audit tab as a small run of
+    // onboarding milestones, so "initial setup" is a visible part of the live
+    // stream the user watches - not invisible work that finishes before the deep
+    // dive's first phase event appears. Best-effort: an audit hiccup must never
+    // fail the build, and emits are gated to the step that did the work so a
+    // resumed build doesn't double-log.
+    const setupMilestone = (
+      text: string,
+      payload?: Record<string, unknown>,
+    ): Promise<void> =>
+      this.auditFor("build:setup")
+        .onboardingPhase(text, payload)
+        .catch(() => {});
+    if (status.completed.length === 0) {
+      await setupMilestone(`Provisioning your agent for "${spec.subject}"`, {
+        subject: spec.subject,
+        entityType: spec.entityType,
+      });
+    }
+
     try {
       // (2) Provision the brain filesystem + git repo (MNEMO-06/07). Skip when
       // both filesystem steps already landed (a resumed / repeat build) so the
@@ -2277,6 +2302,10 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
         // from the first read. Idempotent (INSERT OR REPLACE), so a resumed build
         // re-running this is harmless.
         await this.reindexAllNotes();
+        await setupMilestone(
+          "Knowledge base initialized - seeded your brain from the template",
+          { entityType: spec.entityType },
+        );
       }
 
       // (3/4) Apply the template selection + assemble & persist the operating
@@ -2303,6 +2332,9 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
       if (!has("schedule_defaults")) {
         await this.enableSchedule(template.defaultCadenceCron);
         complete("schedule_defaults");
+        await setupMilestone("Recurring research schedule enabled", {
+          cron: template.defaultCadenceCron,
+        });
       }
 
       // (7) Sync the D1 registry row → `operational` (the MNEMO-05 update path),
@@ -2343,12 +2375,12 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
 
   // ─── Lifecycle: the initial deep dive (onboarding) ───────────────────────
   // After Build provisions the agent, its brain holds only template seeds. The
-  // deep dive is the agent's first job: a fixed FIVE-phase initial research pass
+  // deep dive is the agent's first job: a fixed SIX-phase initial research pass
   // (see src/agent/deepdive/plan.ts) that fills the brain end to end before the
   // agent settles into its recurring cadence. Each phase is its own alarm-driven
   // headless run (`runHeadless`) - so the dive survives hibernation, is resumable
   // (the per-phase cursor is the resume point), and the user sees an honest
-  // "phase N of 5" progress bar over the live audit stream. Build kicks it off;
+  // "phase N of 6" progress bar over the live audit stream. Build kicks it off;
   // it advances itself phase by phase; on completion it arms the weekly review.
 
   /** Current deep-dive state, or `defaultDeepDiveStatus()` if never started. */
@@ -2887,6 +2919,9 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
     );
 
     let text: string;
+    // Every tool the model invoked this turn (flattened across steps), surfaced
+    // back to the chat transcript as `data-tool` parts below (MNEMO-37).
+    let toolCalls: Array<{ toolName: string; input: unknown }> = [];
     try {
       const result = await generateText({
         model,
@@ -2896,6 +2931,7 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
         stopWhen: stepCountIs(INTERACTIVE_STEP_BUDGET),
         onStepFinish: (step) => this.narrateStep(audit, step.toolCalls),
       });
+      toolCalls = result.steps.flatMap((step) => step.toolCalls);
       await this.recordTurnUsage(result.usage, config, sessionId);
       await audit.sessionCompleted("Chat turn complete", {
         steps: result.steps.length,
@@ -2920,7 +2956,12 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
       artifactDrafts,
       audit,
     );
-    const parts: unknown[] = [{ type: "text", text }, ...artifactParts];
+    const toolParts = this.buildToolUseParts(assistantId, toolCalls);
+    const parts: unknown[] = [
+      { type: "text", text },
+      ...toolParts,
+      ...artifactParts,
+    ];
     conversations.appendMessage(
       this.ctx.storage.sql,
       conversationId,
@@ -2929,16 +2970,45 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
     );
 
     // Replay the completed reply as a UI-message stream (the shape the frontend's
-    // DefaultChatTransport already consumes - see costCapAbortResponse).
+    // DefaultChatTransport already consumes - see costCapAbortResponse). Tool-use
+    // chips + artifacts ride the SAME stream so a live turn and a reload match.
     const stream = createUIMessageStream({
       execute: ({ writer }) => {
         writer.write({ type: "text-start", id: assistantId });
         writer.write({ type: "text-delta", id: assistantId, delta: text });
         writer.write({ type: "text-end", id: assistantId });
+        for (const part of toolParts) writer.write(part);
         for (const part of artifactParts) writer.write(part);
       },
     });
     return createUIMessageStreamResponse({ stream });
+  }
+
+  /**
+   * Map the turn's tool calls to `data-tool` UI-message parts (MNEMO-37) so the
+   * chat transcript shows what the agent actually DID - searched, fetched, ran,
+   * wrote - not just its final words. Mirrors the `data-artifact` pattern exactly:
+   * the SAME part is streamed live AND persisted in `parts_json`, and
+   * `convertToModelMessages` ignores `data-*` parts, so a tool chip in history never
+   * disturbs a later model turn. Each part's human `summary` reuses the audit
+   * `describeToolCall` phrasing, and the `id` makes the streamed chips reconcilable.
+   */
+  private buildToolUseParts(
+    assistantId: string,
+    calls: ReadonlyArray<{ toolName: string; input: unknown }>,
+  ): Array<{
+    type: "data-tool";
+    id: string;
+    data: { tool: string; summary: string };
+  }> {
+    return calls.map((call, i) => ({
+      type: "data-tool",
+      id: `${assistantId}-tool-${i}`,
+      data: {
+        tool: call.toolName,
+        summary: describeToolCall(call.toolName, call.input),
+      },
+    }));
   }
 
   /**

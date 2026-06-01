@@ -66,15 +66,38 @@ export interface ArtifactPart {
   data: ArtifactData;
 }
 
+/** The payload of a `data-tool` part - one tool the agent used during the turn. */
+export interface ToolUseData {
+  /** The tool's internal name (e.g. "webSearch", "runPython", "brain__…"). */
+  tool: string;
+  /** Plain-English one-liner for the chip (e.g. "Searching the web: …"). */
+  summary: string;
+}
+
+/**
+ * One tool the agent invoked this turn (MNEMO-37). Like `data-artifact`, it's an AI
+ * SDK v6 custom data part: it streams live AND persists in `parts_json` with the
+ * SAME shape, and `convertToModelMessages` ignores `data-*` parts so a tool chip in
+ * history never disturbs a later model turn. Surfaces what the agent DID, not just
+ * what it said.
+ */
+export interface ToolUsePart {
+  type: "data-tool";
+  /** Stream-reconciliation id (present on the streamed part; harmless if absent). */
+  id?: string;
+  data: ToolUseData;
+}
+
 /**
  * One part of a UI message, matching the MNEMO-15 persisted shape (Vercel AI SDK
- * `UIMessage` parts). Renders `text` + `data-artifact` parts; `reasoning`/`tool`
- * parts flow through untouched so MNEMO-37 can surface them without changing this
- * contract.
+ * `UIMessage` parts). Renders `text` + `data-artifact` + `data-tool` parts;
+ * `reasoning`/native `tool` parts flow through untouched so a later ticket can
+ * surface them without changing this contract.
  */
 export type MessagePart =
   | TextPart
   | ArtifactPart
+  | ToolUsePart
   | ({ type: string } & Record<string, unknown>);
 
 /** Type guard: a part carries renderable assistant/user text. */
@@ -93,6 +116,18 @@ export function isArtifactPart(part: MessagePart): part is ArtifactPart {
   );
 }
 
+/** Type guard: a part records a tool the agent used this turn (a `data-tool` chip). */
+export function isToolPart(part: MessagePart): part is ToolUsePart {
+  if (part.type !== "data-tool") return false;
+  const data = (part as ToolUsePart).data;
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    typeof data.tool === "string" &&
+    typeof data.summary === "string"
+  );
+}
+
 /** Concatenate the text parts of a message (drops tool/reasoning parts). */
 export function messageText(message: ChatMessage): string {
   return message.parts
@@ -104,6 +139,19 @@ export function messageText(message: ChatMessage): string {
 /** The HTML artifacts a message references, in order (drops everything else). */
 export function messageArtifacts(message: ChatMessage): ArtifactData[] {
   return message.parts.filter(isArtifactPart).map((part) => part.data);
+}
+
+/**
+ * The tools a message's turn invoked, in call order (drops everything else). Each
+ * carries a stable `key` (the backend-minted part id) for React list rendering, so
+ * the view never has to fall back to an array index.
+ */
+export function messageToolUses(
+  message: ChatMessage,
+): Array<ToolUseData & { key: string }> {
+  return message.parts
+    .filter(isToolPart)
+    .map((part, i) => ({ ...part.data, key: part.id ?? `tool-${i}` }));
 }
 
 /** One persisted/streamed chat message (mirrors the MNEMO-15 `UIMessage`). */

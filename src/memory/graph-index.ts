@@ -406,6 +406,63 @@ export class GraphIndex {
   }
 
   /**
+   * The WHOLE brain as one subgraph (every neuron + every synapse), bounded by
+   * `maxNodes` — the data behind the Graph tab's default view, which shows the
+   * entire brain rather than a BFS from a single start (PRD §6.2). Unlike
+   * {@link traverse} there is no start node and no depth: it returns all neurons
+   * (newest-updated first, so the cap keeps the freshest when a huge brain spills
+   * past it) plus the synapses whose *source* survives the cap. Dangling out-edge
+   * targets are surfaced once as flagged leaf {@link NeuronRef}s (same as
+   * `traverse`), so "wanted but unwritten" notes still show; edges whose resolved
+   * target was capped out are dropped so the renderer never references a missing
+   * node. `maxNodes` is clamped to the {@link GRAPH_CAPS} rail (defaults to the
+   * MAX, not the small per-traversal default — this view wants the whole brain).
+   */
+  wholeGraph(opts: { maxNodes?: number } = {}): Subgraph {
+    const maxNodes = clamp(
+      opts.maxNodes ?? GRAPH_CAPS.maxNodes,
+      1,
+      GRAPH_CAPS.maxNodes,
+    );
+
+    const nodes = this.db.all<NeuronRef>(
+      `SELECT path, slug, title, updated_at FROM neurons
+       ORDER BY updated_at DESC LIMIT ?`,
+      [maxNodes],
+    );
+    // Real neurons that made the cap — the only valid edge endpoints.
+    const included = new Set<string>();
+    for (const n of nodes) if (n.path != null) included.add(n.path);
+
+    const edges: SynapseRef[] = [];
+    const danglingSeen = new Set<string>();
+    for (const e of this.allEdges()) {
+      // Drop an edge whose source was capped out (its node isn't rendered).
+      if (!included.has(e.src_path)) continue;
+      if (e.dst_path == null) {
+        // Surface the dangling target once as a flagged leaf, then keep the edge.
+        if (!danglingSeen.has(e.dst_slug)) {
+          danglingSeen.add(e.dst_slug);
+          nodes.push({
+            path: null,
+            slug: e.dst_slug,
+            title: null,
+            updated_at: 0,
+            dangling: true,
+          });
+        }
+        edges.push(e);
+      } else if (included.has(e.dst_path)) {
+        // Both endpoints survived the cap — a real, renderable edge.
+        edges.push(e);
+      }
+      // else: resolved target was capped out → skip (no orphan edge).
+    }
+
+    return { nodes, edges };
+  }
+
+  /**
    * Bounded, case-insensitive search over neuron `title`/`slug` (INSTR over the
    * lowercased index — parameterized, so user punctuation/wildcards are inert),
    * newest-updated first, capped limit. This searches the INDEX (titles/links)
@@ -450,6 +507,14 @@ export class GraphIndex {
   brainSizeScalar(): number {
     const b = this.brainSize();
     return b.neurons + b.synapses;
+  }
+
+  /** Every synapse in the brain (the whole-graph edge set). Bounded by callers. */
+  private allEdges(): SynapseRef[] {
+    return this.db.all<SynapseRef>(
+      `SELECT src_path, dst_slug, dst_path, alias FROM synapses`,
+      [],
+    );
   }
 
   /** Outgoing synapses of the neuron at `path` (the linking note's edges). */

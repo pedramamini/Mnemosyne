@@ -9,19 +9,19 @@
  *   getBrainSubgraph(agentId, start, …)    → GET /agents/:id/brain/graph?start&depth → Subgraph
  *   searchNeurons(agentId, q, limit?)      → GET /agents/:id/brain/search?q&limit    → RawNeuron[]
  *
- * NB - MNEMO-09 has NO single whole-graph dump endpoint. The live backend exposes
- * THREE separate read routes (brain size, a bounded BFS subgraph that REQUIRES a
- * `start` slug, and a title/slug index search), not the unified `GET /agents/:id/
- * graph` sketched in the MNEMO-40 spec. Same precedent as `src/api/brain.ts`:
- * mirror the REAL backend, not the spec stub. So this module exposes those three
- * helpers AND a composed `getBrainGraph` that the UI consumes:
+ * The live backend exposes THREE read routes (brain size, the `/brain/graph`
+ * route, and a title/slug index search). `/brain/graph` serves BOTH the whole
+ * (capped) brain (no `start`) AND a bounded BFS subgraph (with a `start` slug) -
+ * see `src/index.ts`. This module exposes those helpers AND a composed
+ * `getBrainGraph` that the UI consumes:
  *   - it always reads the WHOLE-brain size from `/brain/size`, so the brain-size
- *     badge shows true totals even when the rendered map is a bounded subgraph; and
- *   - when given a `start` slug it reads the bounded BFS subgraph and normalizes
- *     the raw neuron/synapse rows into the renderer-friendly `{ nodes, edges }`
- *     shape (force-graph node ids + `source`/`target` edges + computed `degree`).
+ *     badge shows true totals regardless of which view is rendered; and
+ *   - it reads the graph (whole brain by default, or a BFS from a `start`) and
+ *     normalizes the raw neuron/synapse rows into the renderer-friendly
+ *     `{ nodes, edges }` shape (force-graph node ids + `source`/`target` edges +
+ *     computed `degree` + a folder `group` for clustering).
  *   The map therefore "grows" as the brain grows (counts climb on every refetch)
- *   and as the user explores outward from a start neuron (PRD §4 / §6.2).
+ *   and can be explored outward from a start neuron (PRD §4 / §6.2).
  */
 import { get } from "./client";
 
@@ -81,6 +81,12 @@ export interface GraphNode {
   neuronType?: NeuronType;
   /** Incident-edge count - more-connected neurons render larger. */
   degree?: number;
+  /**
+   * Folder group key (the note's directory under `/brain`, e.g. `notes/people`),
+   * `"dangling"` for a pathless leaf, `"root"` for a top-level note. Drives the
+   * canvas clustering force so same-folder neurons settle into the same lobe.
+   */
+  group?: string;
 }
 
 /** A directed edge between two {@link GraphNode} ids (force-graph `source`/`target`). */
@@ -178,6 +184,20 @@ function nodeIdOf(n: RawNeuron): string {
 }
 
 /**
+ * A node's folder group: the note's directory relative to the brain root, used to
+ * cluster same-folder neurons together (PRD §6.2 - "group by folder & proximity").
+ * `/brain/notes/people/acme.md` → `notes/people`; a top-level `/brain/x.md` →
+ * `root`; a dangling (pathless) leaf → `dangling`. The leading `/brain/` (or
+ * `brain/`) prefix is stripped so the key is the meaningful folder path only.
+ */
+function groupOf(n: RawNeuron): string {
+  if (n.path == null) return "dangling";
+  const rel = n.path.replace(/^\/?brain\//, "");
+  const slash = rel.lastIndexOf("/");
+  return slash === -1 ? "root" : rel.slice(0, slash);
+}
+
+/**
  * Normalize a raw MNEMO-09 {@link Subgraph} into the renderer's `{ nodes, edges }`
  * shape: map each synapse to a `source`/`target` edge (dangling targets keyed
  * `dangling:<slug>` so they line up with the dangling leaf nodes), compute each
@@ -208,6 +228,7 @@ export function normalizeSubgraph(sub: Subgraph): {
       title: titleOf(n),
       neuronType: neuronTypeOf(n),
       degree: degree.get(id) ?? 0,
+      group: groupOf(n),
     };
   });
 
@@ -216,10 +237,11 @@ export function normalizeSubgraph(sub: Subgraph): {
 
 /**
  * The composed graph the UI consumes. Always fetches whole-brain size (so the
- * badge is accurate even for a bounded map); with a `start` slug it also fetches
- * and normalizes the bounded BFS subgraph. Without a `start`, returns an
- * empty map alongside the true brain-size totals (see the module header for why
- * the backend has no whole-graph dump).
+ * badge is accurate even for a bounded map), then fetches the graph itself:
+ *   - with a `start` slug → the bounded BFS subgraph from that neuron; or
+ *   - without a `start` → the WHOLE (capped) brain — the Graph tab's default view
+ *     (`/brain/graph` with no start; see `getBrainSubgraphFlexible`).
+ * Either way the raw subgraph is normalized into renderer-ready `{ nodes, edges }`.
  */
 export async function getBrainGraph(
   agentId: string,
@@ -232,8 +254,26 @@ export async function getBrainGraph(
   };
 
   const start = opts.start?.trim();
-  if (!start) return { nodes: [], edges: [], brainSize };
-
-  const sub = await getBrainSubgraph(agentId, start, { depth: opts.depth });
+  const sub = await getBrainSubgraphFlexible(agentId, {
+    start: start || undefined,
+    depth: opts.depth,
+  });
   return { ...normalizeSubgraph(sub), brainSize };
+}
+
+/**
+ * The `/brain/graph` fetch with an OPTIONAL start: omit `start` for the whole
+ * (capped) brain, pass it for a bounded BFS. The public {@link getBrainSubgraph}
+ * stays start-required for direct callers; this is the flexible form
+ * {@link getBrainGraph} composes over both modes through one endpoint.
+ */
+function getBrainSubgraphFlexible(
+  agentId: string,
+  opts: BrainGraphOpts = {},
+): Promise<Subgraph> {
+  const params = new URLSearchParams();
+  if (opts.start) params.set("start", opts.start);
+  if (opts.depth != null) params.set("depth", String(opts.depth));
+  const qs = params.toString();
+  return get<Subgraph>(`${brainBase(agentId)}/graph${qs ? `?${qs}` : ""}`);
 }
