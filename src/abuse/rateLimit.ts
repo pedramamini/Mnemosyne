@@ -40,6 +40,8 @@ export const RATE_LIMITS = {
   research_start: { limit: 30, windowSec: 60 },
   /** Agent build/provision - per account (provisioning is expensive). */
   build: { limit: 10, windowSec: 60 },
+  /** Document upload/ingest - per account (conversion + brain seeding is costly). */
+  documents_upload: { limit: 20, windowSec: 60 },
   /** Outbound messaging send - per account (Track H paid add-on). */
   messaging_send: { limit: 60, windowSec: 60 },
 } satisfies Record<string, RateLimitRule>;

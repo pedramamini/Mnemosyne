@@ -62,8 +62,16 @@ import {
   type AgentTemplate,
   getAccount,
   getAgent,
+  listConvertedDocumentsByAgent,
   updateAgent,
+  updateDocument,
 } from "../db/index.ts";
+import {
+  type SeedInput,
+  type SeedResult,
+  seedDocumentIntoBrain,
+} from "../documents/seed.ts";
+import { getConverted } from "../documents/store.ts";
 import type { Env } from "../env.ts";
 import { getModel, type ResolvedModel } from "../llm/getModel.ts";
 import { recordUsage } from "../llm/recordUsage.ts";
@@ -216,6 +224,7 @@ import {
 import { buildDiscoverySystemPrompt } from "./discovery/prompt.ts";
 import { makeDiscoveryTools } from "./discovery/tools.ts";
 import {
+  DiscoveryDocument,
   type DiscoveryEntityType,
   DiscoveryProgress,
   DiscoverySpec,
@@ -267,6 +276,14 @@ const SANDBOX_LEASE_KEY = "sandbox:leaseId";
 const DISCOVERY_KEY = "discovery";
 const DISCOVERY_INPUT_KEY = "discovery:input";
 const DISCOVERY_MESSAGES_KEY = "discovery:messages";
+// Documents attached during creation (DOCS-01): a bounded list of
+// {id, filename, summary} injected into the discoveryTurn context so the
+// interview sees the uploaded material. A sibling key (like input/messages),
+// NOT part of DiscoveryState.
+const DISCOVERY_DOCUMENTS_KEY = "discovery:documents";
+/** Caps so a big upload set can't blow the discovery context. */
+const MAX_DISCOVERY_DOCUMENTS = 25;
+const MAX_DISCOVERY_DOC_SUMMARY_CHARS = 800;
 
 // Build lifecycle state (MNEMO-30), persisted to DO-SQLite so a provisioning run
 // that fails mid-way (a half-built sandbox) is resumable across hibernation: each
@@ -2075,6 +2092,8 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
       }),
     );
     setMeta(this.ctx.storage.sql, DISCOVERY_MESSAGES_KEY, JSON.stringify([]));
+    // A fresh Discovery starts with no attached documents (uploads append later).
+    setMeta(this.ctx.storage.sql, DISCOVERY_DOCUMENTS_KEY, JSON.stringify([]));
     const state = defaultDiscoveryState();
     setMeta(this.ctx.storage.sql, DISCOVERY_KEY, JSON.stringify(state));
     return state;
@@ -2120,7 +2139,11 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
 
     const result = await generateText({
       model,
-      system: buildDiscoverySystemPrompt({ name, description }),
+      system: buildDiscoverySystemPrompt({
+        name,
+        description,
+        documents: this.discoveryDocuments(),
+      }),
       messages,
       tools,
       stopWhen: [stepCountIs(DISCOVERY_STEP_BUDGET), () => finalized],
@@ -2198,6 +2221,145 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
   private discoveryMessages(): ModelMessage[] {
     const json = getMeta(this.ctx.storage.sql, DISCOVERY_MESSAGES_KEY);
     return json ? (JSON.parse(json) as ModelMessage[]) : [];
+  }
+
+  // ─── Documents (DOCS-01) ─────────────────────────────────────────────────
+  // Uploads to a LIVE agent seed immediately (seedDocument); uploads to an agent
+  // still in Discovery are tracked here (attachDiscoveryDocument) so the interview
+  // sees them, then seeded at Build time (seedConvertedDocuments). The brain-
+  // touching work all goes through the same writeNote pipeline as agent writes.
+
+  /** The documents attached to the in-progress Discovery (for prompt injection). */
+  private discoveryDocuments(): DiscoveryDocument[] {
+    const json = getMeta(this.ctx.storage.sql, DISCOVERY_DOCUMENTS_KEY);
+    if (!json) return [];
+    const parsed = DiscoveryDocument.array().safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : [];
+  }
+
+  /**
+   * Record a document attached to the in-progress Discovery (DOCS-01): the upload
+   * route calls this when the agent isn't built yet, so {@link discoveryTurn} can
+   * inject the summary. Deduped by id; the summary is clamped and the list capped
+   * so a big upload set can't blow the discovery context.
+   */
+  attachDiscoveryDocument(doc: {
+    id: string;
+    filename: string;
+    summary: string;
+  }): void {
+    this.ensureInit();
+    const existing = this.discoveryDocuments().filter((d) => d.id !== doc.id);
+    const entry: DiscoveryDocument = {
+      id: doc.id,
+      filename: doc.filename,
+      summary: doc.summary.slice(0, MAX_DISCOVERY_DOC_SUMMARY_CHARS),
+    };
+    const next = [...existing, entry].slice(-MAX_DISCOVERY_DOCUMENTS);
+    setMeta(
+      this.ctx.storage.sql,
+      DISCOVERY_DOCUMENTS_KEY,
+      JSON.stringify(next),
+    );
+  }
+
+  /**
+   * Seed one converted document into the LIVE brain (DOCS-01): chunk + writeNote
+   * the source-index neuron and each chunk through the agent's own write hooks, so
+   * reindex + commit + synapse graph happen exactly as for an agent write. Public
+   * RPC for the upload route's built-agent branch.
+   */
+  async seedDocument(input: SeedInput): Promise<SeedResult> {
+    this.ensureInit();
+    return this.seedOneDocument(input);
+  }
+
+  /** Shared seed: resolve the sandbox (test override or warm) + write hooks. */
+  private async seedOneDocument(input: SeedInput): Promise<SeedResult> {
+    const sandbox = this.testSandboxOverride ?? (await this.warmSandbox());
+    return seedDocumentIntoBrain(
+      this.env,
+      this.name,
+      this.writeHooks(),
+      sandbox,
+      input,
+    );
+  }
+
+  /**
+   * Build-time seeding (DOCS-01): drain the `converted` documents attached to this
+   * agent's Discovery, seed each into the now-live brain, and flip it to `seeded`
+   * (clearing `discovery_id`). Naturally idempotent - a re-run finds no `converted`
+   * rows, so a repeat build never double-seeds. Per-document failures are recorded
+   * on the row, not raised, so one bad upload can't fail the build.
+   */
+  private async seedConvertedDocuments(): Promise<void> {
+    const docs = await listConvertedDocumentsByAgent(this.env, this.name);
+    if (docs.length === 0) return;
+    let seeded = 0;
+    for (const doc of docs) {
+      try {
+        const markdown = await getConverted(this.env, this.name, doc.id);
+        if (!markdown) {
+          await updateDocument(this.env, doc.id, {
+            status: "failed",
+            error: "converted markdown missing in storage",
+          });
+          continue;
+        }
+        const { sourceSlug, neuronCount } = await this.seedOneDocument({
+          markdown,
+          filename: doc.filename,
+          ingestedAt: Date.now(),
+        });
+        await updateDocument(this.env, doc.id, {
+          status: "seeded",
+          source_slug: sourceSlug,
+          neuron_count: neuronCount,
+          discovery_id: null,
+        });
+        seeded += 1;
+      } catch (err) {
+        await updateDocument(this.env, doc.id, {
+          status: "failed",
+          error: errMessage(err),
+        });
+      }
+    }
+    if (seeded > 0) {
+      await this.auditFor("build:documents")
+        .onboardingPhase(
+          `Seeded ${seeded} uploaded document${seeded === 1 ? "" : "s"} into your brain`,
+          { documents: seeded },
+        )
+        .catch(() => {});
+    }
+  }
+
+  /**
+   * Delete the derived neurons of a seeded document (source-index + chunks) through
+   * the normal delete pipeline (DOCS-01 `?purgeNeurons=true`). Lists the source's
+   * namespaced notes directory and {@link deleteNote}s each, so reindex + commit
+   * happen per removal. Returns the count removed. A missing source slug is a no-op.
+   */
+  async purgeDocumentNeurons(sourceSlug: string): Promise<number> {
+    this.ensureInit();
+    const dirSlug = sourceSlug.replace(/\/index$/, "");
+    if (dirSlug === "" || dirSlug.includes("..")) return 0;
+    const sandbox = this.testSandboxOverride ?? (await this.warmSandbox());
+    const dir = `${NOTES_DIR}/${dirSlug}`;
+    const found = await sandbox.run(`find ${dir} -type f -name '*.md'`);
+    const paths = found.stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+    let removed = 0;
+    for (const path of paths) {
+      const slug = path.slice(NOTES_DIR.length + 1);
+      await this.memoryDelete(slug);
+      removed += 1;
+    }
+    return removed;
   }
 
   // ─── Lifecycle: Build (MNEMO-30, PRD §5(2)) ──────────────────────────────
@@ -2342,6 +2504,19 @@ export class MnemosyneAgent extends AIChatAgent<Env> {
       if (!has("registry_synced")) {
         await this.syncRegistry(spec, template);
         complete("registry_synced");
+      }
+
+      // (7.5) Seed any documents the user attached during Discovery into the now-
+      // live brain (DOCS-01), BEFORE the deep dive so it builds on the user's own
+      // knowledge. Best-effort + idempotent: per-doc failures are recorded on the
+      // row and a re-run finds no `converted` docs, so the build still reaches
+      // ready and never double-seeds.
+      try {
+        await this.seedConvertedDocuments();
+      } catch (err) {
+        await this.auditFor("build:documents")
+          .error(`Document seeding failed: ${errMessage(err)}`)
+          .catch(() => {});
       }
 
       // (8) Kick off the agent's initial deep dive so "operational" means "has

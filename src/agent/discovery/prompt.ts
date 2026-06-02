@@ -30,16 +30,20 @@ export const DISCOVERY_CONFIDENCE_TARGET = 0.9;
 export function buildDiscoverySystemPrompt(input: {
   name: string;
   description: string;
+  /** Documents the person attached during creation (DOCS-01), summarized + bounded. */
+  documents?: { filename: string; summary: string }[];
 }): string {
   const facetLines = DISCOVERY_FACETS.map(
     (facet) => `- ${facet.label}: ${facet.prompt}`,
   ).join("\n");
 
+  const attached = buildAttachedMaterials(input.documents ?? []);
+
   return `You are setting up a new research agent. Your job right now is to genuinely understand what this agent should specialize in - a focused scoping interview, not a one-shot guess.
 
 The agent
 Name: ${input.name}
-What the person said they want: ${input.description}
+What the person said they want: ${input.description}${attached}
 
 How to interview
 Have a calm, plain-English conversation that draws the real scope out over several turns - expect roughly ${DISCOVERY_MIN_TURNS}-5 exchanges before you understand enough. Each turn, ask one or two focused follow-up questions - never a long questionnaire. Prefer the person's own words; reflect back what you heard so they can correct you. Do not lecture, and do not re-ask what they have already made clear. The opening description is a starting point, not an answer - dig into what is vague.
@@ -60,4 +64,40 @@ Your reply is read by a human. Write ONLY plain, warm prose - the follow-up ques
 
 When you understand enough
 Quietly assess your confidence as you go - aim for good-enough (~${DISCOVERY_CONFIDENCE_TARGET}), NOT perfection. Only after a real interview, once you genuinely understand the scope and sources, call finalize_discovery exactly once with the complete spec (your concrete summary of each facet, the entity type, and your confidence). Do not rush it: a vague one-liner is never enough to finalize on, and you will be told to keep going if you try too early. Calling finalize_discovery is the only way to finish - do not say you are done in prose.`;
+}
+
+/** Total chars of attached-material summaries injected into the prompt (bound). */
+const MAX_ATTACHED_CHARS = 4000;
+
+/**
+ * Render the "Attached materials" block from the documents the person uploaded
+ * during creation. Bounded in total ({@link MAX_ATTACHED_CHARS}) so a large upload
+ * can't blow the context; returns "" when nothing is attached (no empty section).
+ */
+function buildAttachedMaterials(
+  documents: { filename: string; summary: string }[],
+): string {
+  if (documents.length === 0) return "";
+
+  const blocks: string[] = [];
+  let used = 0;
+  let omitted = 0;
+  for (const doc of documents) {
+    const summary = doc.summary.trim();
+    const block = `- ${doc.filename}: ${summary}`;
+    if (used + block.length > MAX_ATTACHED_CHARS) {
+      omitted = documents.length - blocks.length;
+      break;
+    }
+    blocks.push(block);
+    used += block.length;
+  }
+  const tail =
+    omitted > 0 ? `\n(and ${omitted} more attached file(s) not shown)` : "";
+
+  return `
+
+Attached materials
+The person uploaded ${documents.length} document(s) when creating this agent. Use these as context for what they care about and what the agent should know - they are starting knowledge, not the whole scope:
+${blocks.join("\n")}${tail}`;
 }

@@ -10,7 +10,17 @@
  * Per-agent chat/memory/audit state lives in DO SQLite, not D1 (PRD §7.4).
  */
 import { z } from "zod";
+// The document domain owns its row shape (DOCS-01); we import it here for the
+// typed CRUD helpers, mirroring how ArtifactRow/ReportRow live in this module but
+// keeping the dependency one-directional (documents/types imports only zod).
+import {
+  type DocumentRecord,
+  DocumentRow,
+  type DocumentStatus,
+} from "../documents/types.ts";
 import type { Env } from "../env.ts";
+
+export type { DocumentRecord, DocumentRow } from "../documents/types.ts";
 
 // ─── Row schemas (source of truth for shapes) ───────────────────────────────
 
@@ -236,6 +246,41 @@ export interface NewArtifact {
   byte_size: number;
 }
 
+// ─── agent_documents (DOCS-01, uploaded-document metadata) ───────────────────
+
+/** Insert input for an uploaded document. `id` is REQUIRED (the route mints it
+ * first to derive the R2 key), and `created_at` (epoch-ms) is stamped here. */
+export interface NewDocument {
+  id: string;
+  agent_id: string;
+  account_id: string;
+  discovery_id?: string | null;
+  filename: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  r2_key: string;
+  status: DocumentStatus;
+  convert_method?: string | null;
+  markdown_chars?: number | null;
+  neuron_count?: number | null;
+  source_slug?: string | null;
+  error?: string | null;
+}
+
+/** Patch for {@link updateDocument}; only the listed columns are mutable. */
+export type DocumentUpdate = Partial<
+  Pick<
+    DocumentRecord,
+    | "status"
+    | "discovery_id"
+    | "convert_method"
+    | "markdown_chars"
+    | "neuron_count"
+    | "source_slug"
+    | "error"
+  >
+>;
+
 // ─── accounts ─────────────────────────────────────────────────────────────────
 
 export async function createAccount(
@@ -460,6 +505,7 @@ export async function deleteAgent(env: Env, id: string): Promise<void> {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM reports WHERE agent_id = ?").bind(id),
     env.DB.prepare("DELETE FROM artifacts WHERE agent_id = ?").bind(id),
+    env.DB.prepare("DELETE FROM agent_documents WHERE agent_id = ?").bind(id),
     env.DB.prepare("DELETE FROM agent_numbers WHERE agent_id = ?").bind(id),
     env.DB.prepare("DELETE FROM message_whitelist WHERE agent_id = ?").bind(id),
     env.DB.prepare("DELETE FROM addons WHERE agent_id = ?").bind(id),
@@ -576,6 +622,124 @@ export async function getArtifact(
     .bind(id)
     .first();
   return row ? ArtifactRow.parse(row) : null;
+}
+
+// ─── agent_documents (DOCS-01, uploaded-document metadata) ───────────────────
+
+/** Insert a document metadata row. `id` is caller-minted; `created_at` is epoch-ms. */
+export async function createDocument(
+  env: Env,
+  input: NewDocument,
+): Promise<DocumentRecord> {
+  const row = await env.DB.prepare(
+    `INSERT INTO agent_documents
+       (id, agent_id, account_id, discovery_id, filename, mime_type, size_bytes,
+        r2_key, status, convert_method, markdown_chars, neuron_count, source_slug,
+        error, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+  )
+    .bind(
+      input.id,
+      input.agent_id,
+      input.account_id,
+      input.discovery_id ?? null,
+      input.filename,
+      input.mime_type ?? null,
+      input.size_bytes ?? null,
+      input.r2_key,
+      input.status,
+      input.convert_method ?? null,
+      input.markdown_chars ?? null,
+      input.neuron_count ?? null,
+      input.source_slug ?? null,
+      input.error ?? null,
+      Date.now(),
+    )
+    .first();
+  return DocumentRow.parse(row);
+}
+
+/** Fetch a single document row by id, or null. Ownership is the caller's concern. */
+export async function getDocumentById(
+  env: Env,
+  id: string,
+): Promise<DocumentRecord | null> {
+  const row = await env.DB.prepare("SELECT * FROM agent_documents WHERE id = ?")
+    .bind(id)
+    .first();
+  return row ? DocumentRow.parse(row) : null;
+}
+
+/** List an agent's documents, newest first (metadata only - never enumerates R2). */
+export async function listDocumentsByAgent(
+  env: Env,
+  agentId: string,
+): Promise<DocumentRecord[]> {
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM agent_documents WHERE agent_id = ? ORDER BY created_at DESC",
+  )
+    .bind(agentId)
+    .all();
+  return results.map((r) => DocumentRow.parse(r));
+}
+
+/**
+ * The `converted` documents attached to an agent (uploaded before Build), oldest
+ * first - the set the Build pass drains and seeds into the now-live brain.
+ */
+export async function listConvertedDocumentsByAgent(
+  env: Env,
+  agentId: string,
+): Promise<DocumentRecord[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM agent_documents
+     WHERE agent_id = ? AND status = 'converted' ORDER BY created_at ASC`,
+  )
+    .bind(agentId)
+    .all();
+  return results.map((r) => DocumentRow.parse(r));
+}
+
+// Fixed allow-list of mutable document columns - identifiers never come from
+// caller input, so the dynamic SET clause cannot be injected.
+const DOCUMENT_UPDATABLE = [
+  "status",
+  "discovery_id",
+  "convert_method",
+  "markdown_chars",
+  "neuron_count",
+  "source_slug",
+  "error",
+] as const satisfies readonly (keyof DocumentUpdate)[];
+
+/**
+ * Patch a document row (status transitions, neuron counts, error). Only columns
+ * present in `patch` are written; passing `null` clears one. Returns the updated
+ * row, or null if the document is gone.
+ */
+export async function updateDocument(
+  env: Env,
+  id: string,
+  patch: DocumentUpdate,
+): Promise<DocumentRecord | null> {
+  const cols = DOCUMENT_UPDATABLE.filter((c) => patch[c] !== undefined);
+  if (cols.length === 0) return getDocumentById(env, id);
+
+  const setClause = cols.map((c) => `${c} = ?`).join(", ");
+  const values = cols.map((c) => patch[c] ?? null);
+  const row = await env.DB.prepare(
+    `UPDATE agent_documents SET ${setClause} WHERE id = ? RETURNING *`,
+  )
+    .bind(...values, id)
+    .first();
+  return row ? DocumentRow.parse(row) : null;
+}
+
+/** Delete a document metadata row. The R2 blobs are dropped by the store layer. */
+export async function deleteDocumentRow(env: Env, id: string): Promise<void> {
+  await env.DB.prepare("DELETE FROM agent_documents WHERE id = ?")
+    .bind(id)
+    .run();
 }
 
 // ─── llm_profiles ─────────────────────────────────────────────────────────────

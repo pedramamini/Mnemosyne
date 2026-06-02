@@ -70,7 +70,7 @@ Pin versions per the reference doc's "Stack to pin" section when scaffolding.
 ├── env.d.ts                               # merges src/env.ts Env into Cloudflare.Env; types TEST_MIGRATIONS
 ├── scripts/check-secrets.ts               # preflight: wrangler secret list vs REQUIRED_SECRETS (MNEMO-50)
 ├── .github/workflows/ci.yml               # PR=checks; main=release:staging; release/tag=release:prod (MNEMO-50)
-├── migrations/                            # D1 SQL migrations (0001_accounts … 0007_a2p_10dlc)
+├── migrations/                            # D1 SQL migrations (0001_accounts … 0013_artifacts, 0014_documents)
 ├── src/
 │   ├── index.ts                           # Hono entry; /health, auth, /agents/:id/* + DO re-export
 │   ├── env.ts                             # Env bindings interface (DB/SESSIONS/AGENT; grown per-phase)
@@ -80,6 +80,7 @@ Pin versions per the reference doc's "Stack to pin" section when scaffolding.
 │   ├── tools/                             # Zod-typed sandbox-driving tool registry + large-output-to-FS-path rule (MNEMO-16)
 │   ├── reports/                           # Code Interpreter wrapper (interpreter.ts) + chart→PNG pipeline (charts.ts, python-env.ts, types.ts) (MNEMO-23) + Obsidian-front-matter report generation (front-matter.ts, markdown.ts, generate.ts) (MNEMO-24) + R2 archive + retrieval (archive.ts, routes.ts) (MNEMO-25) + delta-aware reporting (findings.ts, delta.ts, delta-report.ts) (MNEMO-26) + audit-emit seams (audit.ts, MNEMO-21)
 │   ├── email/                             # Resend transport: magic-link send (resend.ts, MNEMO-03) + report-ready/update owner notification (report-notify.ts, MNEMO-28)
+│   ├── documents/                         # DOCS-01 upload ingestion: types.ts (Zod row + ConvertOutcome/IngestResult + accept-list) + convert.ts (env.AI.toMarkdown, no sandbox fallback) + chunk.ts (pure heading-chunker) + seed.ts (writeNote-pipeline brain seeding) + store.ts (DOCUMENTS_BUCKET R2 + agent_documents D1) + routes.ts (upload/list/delete + ingest orchestrator)
 │   ├── db/index.ts                        # typed D1 access layer (Zod row schemas + CRUD helpers)
 │   ├── audit/                             # AuditLog DO (AuditLog.ts) + DoSqlDriver + SSE wrapper (MNEMO-20) + AuditEmitter facade + getAuditStub (emitter.ts, MNEMO-21) over the untouched store.ts/types.ts spike
 │   ├── schedule/                          # DO this.schedule per-agent timers + Worker scheduled cron fan-out + prod-gated __dev/cron trigger route (types.ts/fanout.ts/dev-routes.ts, MNEMO-27)
@@ -151,7 +152,11 @@ boundary over the (Beta-header) Sandbox SDK; the DO owns warm/idle lifecycle (PR
 adds a SECOND R2 bucket, `REPORTS_BUCKET` (`mnemosyne-reports`), kept separate from `BRAIN_BUCKET`
 so report blob retention/lifecycle can differ from the brain snapshots. MNEMO-27 adds a `[triggers]`
 `crons` block (the platform heartbeat), a `SCHEDULE_KV` KV namespace (the fan-out's platform-side
-last-run marker), and an `ENVIRONMENT` var (gates the dev-only trigger routes).
+last-run marker), and an `ENVIRONMENT` var (gates the dev-only trigger routes). DOCS-01 adds a THIRD
+R2 bucket, `DOCUMENTS_BUCKET` (`mnemosyne-documents`), for the user's original uploaded files plus
+their converted markdown (one prefix per upload, `agents/<agentId>/documents/<docId>/`), kept
+separate from the brain/report buckets so upload retention can differ; the derived brain neurons
+still land in `BRAIN_BUCKET` via the normal write pipeline.
 
 **Brain FS layout + git versioning (`src/memory/`, MNEMO-07):** `/brain` is a **git repo inside
 the sandbox**, auto-committed on every write and on each consolidation pass (PRD §6.9). `layout.ts`
@@ -1006,6 +1011,31 @@ character by codepoint instead of printing the glyph, so the project stays 100% 
   `rg $'\u2014' src test frontend/src migrations docs *.md` (the shell expands the escape to the EM DASH glyph).
 - If you are writing or editing an agent system prompt or report template, state the same
   constraint to the model so generated output stays em-dash-free.
+
+**Document ingestion (`src/documents/`, DOCS-01):** a user uploads a document and it becomes linked
+neurons in the agent's brain. The pipeline is: accept-list gate (size + extension) -> store the
+original in `DOCUMENTS_BUCKET` -> `convertToMarkdown` (`env.AI.toMarkdown` is the SOLE converter:
+PDF, `.docx`, the Excel/open spreadsheet variants, `.ods/.odt/.numbers`, CSV/HTML/XML, images) ->
+`chunkMarkdown` (pure: split on the shallowest heading level, sub-split an oversized section, one
+neuron per section plus a parent source-index neuron that `[[links]]` to each chunk, every slug
+namespaced under `sources/<source>/` so two uploads never collide) -> seed via the MNEMO-10
+`writeNote` pipeline so reindex + commit + synapse graph happen for free. There is **no sandbox
+conversion fallback**: legacy/unsupported formats (`.doc`, `.ppt/.pptx`, `.rtf`, `.pages`, ...) are
+rejected at the accept-list with a typed `UNSUPPORTED_FORMAT`, and a failed/empty conversion is a
+typed `CONVERSION_FAILED`/`EMPTY_RESULT` (never a blank neuron). Seeding branches on agent state: an
+upload to a **live** agent (Build done) seeds immediately via the DO's `seedDocument` RPC, while an
+upload during **Discovery** is stored `converted` (the markdown stashed in R2) and its short summary
+is injected into the `discoveryTurn` interview context, then `build()` drains every `converted` doc
+into the now-live brain BEFORE the deep dive (idempotent: a re-run finds none, so no double-seed).
+D1 `agent_documents` (0014) is the metadata index over the R2 blobs (status / neuron count /
+source slug / error), never the markdown itself. Routes (`src/documents/routes.ts`, wired into
+`src/index.ts` before the `/agents/:agentId/*` wildcard): `POST/GET /agents/:agentId/documents`
+(multipart upload returning a per-file `IngestResult` list; partial success is allowed) and `DELETE
+/agents/:agentId/documents/:docId` (+ `?purgeNeurons=true` to also drop the derived neurons), each
+behind `requireAuth` + the shared `assertOwnsAgent` 404-guard + a per-account `documents_upload`
+rate limit. The orchestrator (`ingestDocuments`) is exported so it unit-tests directly with a mocked
+`env.AI` + recording sandbox (`test/documents-ingest.test.ts`); the pure pieces have their own
+suites (`test/documents-convert.test.ts`, `test/documents-chunk.test.ts`).
 
 ## Build / test / deploy
 

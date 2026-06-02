@@ -16,6 +16,7 @@ import { auditRoutes } from "./audit/routes.ts";
 import { type AppEnv, getAccountId, requireAuth } from "./auth/middleware.ts";
 import { authRoutes } from "./auth/routes.ts";
 import { billingRoutes } from "./billing/routes.ts";
+import { documentRoutes } from "./documents/routes.ts";
 import type { Env } from "./env.ts";
 import { errorHandler, notFoundHandler } from "./errors/handler.ts";
 import { llmProfileRoutes } from "./llm/profileRoutes.ts";
@@ -337,6 +338,15 @@ app.route("/", conversationRoutes());
 // ownership guard (applied inside the sub-app). Mounted before the
 // `/agents/:agentId/*` wildcard below.
 app.route("/", buildRoutes());
+
+// Document ingestion API (DOCS-01): POST /agents/:agentId/documents (multipart
+// upload → env.AI.toMarkdown conversion → heading-chunked brain seeding), GET
+// /agents/:agentId/documents (metadata list), DELETE /agents/:agentId/documents/
+// :docId (+ ?purgeNeurons=true). Uploads to a built agent seed immediately;
+// uploads during Discovery seed at Build time. Each route is behind requireAuth +
+// an ownership guard + a per-account upload rate limit (applied inside the
+// sub-app). Mounted before the `/agents/:agentId/*` wildcard below.
+app.route("/", documentRoutes());
 
 // Onboarding deep-dive API: GET /agents/:agentId/deepdive (read DeepDiveStatus -
 // the 6-phase initial research progress). The dive is kicked off by Build and

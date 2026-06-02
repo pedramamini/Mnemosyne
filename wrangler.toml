@@ -87,6 +87,18 @@ bucket_name = "mnemosyne-reports"
 # Placeholder - local dev/tests key R2 by binding. Create the remote bucket with:
 # wrangler r2 bucket create mnemosyne-reports
 
+# R2 bucket (DOCUMENTS_BUCKET) - added in DOCS-01. Original user-uploaded documents
+# (PDF/docx/xlsx/images/…) and their converted markdown, one prefix per upload
+# (`agents/<agentId>/documents/<docId>/`). Kept SEPARATE from BRAIN_BUCKET /
+# REPORTS_BUCKET so upload retention can differ; D1 `agent_documents` (0014) holds
+# the metadata index. The brain neurons the upload seeds live in BRAIN_BUCKET via
+# the normal writeNote pipeline - this bucket holds only the source blobs.
+[[r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "mnemosyne-documents"
+# Placeholder - local dev/tests key R2 by binding. Create the remote bucket with:
+# wrangler r2 bucket create mnemosyne-documents
+
 # Durable Objects (per-agent AIChatAgent) - added in MNEMO-04
 [[durable_objects.bindings]]
 name = "AGENT"
@@ -304,6 +316,11 @@ binding = "REPORTS_BUCKET"
 bucket_name = "mnemosyne-reports-staging"
 # wrangler r2 bucket create mnemosyne-reports-staging
 
+[[env.staging.r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "mnemosyne-documents-staging"
+# wrangler r2 bucket create mnemosyne-documents-staging
+
 [[env.staging.durable_objects.bindings]]
 name = "AGENT"
 class_name = "MnemosyneAgent"
@@ -381,6 +398,11 @@ bucket_name = "mnemosyne-brains"
 binding = "REPORTS_BUCKET"
 bucket_name = "mnemosyne-reports"
 # wrangler r2 bucket create mnemosyne-reports
+
+[[env.production.r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "mnemosyne-documents"
+# wrangler r2 bucket create mnemosyne-documents
 
 [[env.production.durable_objects.bindings]]
 name = "AGENT"

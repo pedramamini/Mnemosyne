@@ -87,6 +87,12 @@ export interface Env {
    */
   REPORTS_BUCKET: R2Bucket;
 
+  /** Original uploaded documents (DOCS-01): the user's source files (PDF/docx/…)
+   * before/after `env.AI.toMarkdown` conversion, keyed
+   * `agents/<agentId>/documents/<docId>/…`. Kept SEPARATE from the brain/report
+   * buckets so upload retention can differ; D1 `agent_documents` holds the index. */
+  DOCUMENTS_BUCKET: R2Bucket;
+
   /**
    * Workers AI - the zero-secret free default the per-user model resolver
    * (`src/llm/getModel.ts`) falls back to: `@cf/qwen/qwen3-30b-a3b-fp8`

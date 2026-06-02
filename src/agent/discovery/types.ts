@@ -110,3 +110,16 @@ export type DiscoveryState = z.infer<typeof DiscoveryState>;
 export function defaultDiscoveryState(): DiscoveryState {
   return { status: "in_progress", spec: null, turns: 0, progress: null };
 }
+
+/**
+ * A document attached to an in-progress Discovery (DOCS-01): its id, filename, and
+ * a short summary (the first chunk of converted markdown). Stored under a sibling
+ * `discovery:documents` meta key - NOT in {@link DiscoveryState} - and injected
+ * into the discoveryTurn LLM context so the interview "sees" the uploaded material.
+ */
+export const DiscoveryDocument = z.object({
+  id: z.string(),
+  filename: z.string(),
+  summary: z.string(),
+});
+export type DiscoveryDocument = z.infer<typeof DiscoveryDocument>;

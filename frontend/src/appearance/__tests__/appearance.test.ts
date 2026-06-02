@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_FONT,
-  DEFAULT_THEME,
-  isFont,
-  isTheme,
-} from "../appearance";
+import { DEFAULT_FONT, DEFAULT_THEME, isFont, isTheme } from "../appearance";
 
 describe("appearance defaults", () => {
   it("defaults the app font to the Space Grotesk brand face", () => {
