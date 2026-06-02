@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { FileUp, Plus } from "lucide-react";
 import { useState } from "react";
 import { BrainHistoryPanel } from "@/components/brain/BrainHistoryPanel";
 import { BrainTree } from "@/components/brain/BrainTree";
@@ -11,6 +11,7 @@ import {
   useDeleteBrainFile,
   useWriteBrainFile,
 } from "@/components/brain/useBrain";
+import { DocumentUploader } from "@/components/documents/DocumentUploader";
 import { ResponsiveMasterDetail } from "@/components/layout";
 import {
   Banner,
@@ -43,8 +44,11 @@ export interface BrainExplorerTabProps {
  */
 export function BrainExplorerTab({ agentId }: BrainExplorerTabProps) {
   const { toast } = useToast();
-  const { entries, loading, error } = useBrainFiles(agentId);
+  const { entries, loading, error, refetch } = useBrainFiles(agentId);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  // "Add documents to brain" (DOCS-02): seeds neurons via the existing pipeline,
+  // then refetches the tree so the new source-index + chunk neurons appear.
+  const [docsOpen, setDocsOpen] = useState(false);
   const { file, loading: fileLoading } = useBrainFile(agentId, selectedPath);
   const { write, isSaving } = useWriteBrainFile(agentId);
   const { remove } = useDeleteBrainFile(agentId);
@@ -112,13 +116,23 @@ export function BrainExplorerTab({ agentId }: BrainExplorerTabProps) {
     <Panel padding="3" className={styles.treePane}>
       <Stack gap="3">
         <Inline gap="2" justify="between" wrap>
-          <Button
-            size="sm"
-            leftIcon={<Icon icon={Plus} size="sm" />}
-            onClick={() => openNew("")}
-          >
-            New file
-          </Button>
+          <Inline gap="2" wrap={false}>
+            <Button
+              size="sm"
+              leftIcon={<Icon icon={Plus} size="sm" />}
+              onClick={() => openNew("")}
+            >
+              New file
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              leftIcon={<Icon icon={FileUp} size="sm" />}
+              onClick={() => setDocsOpen(true)}
+            >
+              Add documents
+            </Button>
+          </Inline>
           <DownloadBrainButton agentId={agentId} />
         </Inline>
 
@@ -235,6 +249,33 @@ export function BrainExplorerTab({ agentId }: BrainExplorerTabProps) {
         {historyPath && (
           <BrainHistoryPanel agentId={agentId} path={historyPath} />
         )}
+      </Modal>
+
+      <Modal
+        open={docsOpen}
+        onClose={() => setDocsOpen(false)}
+        title="Add documents to brain"
+        size="lg"
+      >
+        <DocumentUploader
+          agentId={agentId}
+          variant="brain"
+          onIngested={(results) => {
+            // New neurons were written through the brain pipeline - refetch the
+            // tree so they show up without a full reload.
+            const seeded = results.filter((r) => r.status === "seeded").length;
+            if (seeded > 0) {
+              refetch();
+              toast({
+                title:
+                  seeded === 1
+                    ? "Document seeded into the brain"
+                    : `${seeded} documents seeded into the brain`,
+                variant: "success",
+              });
+            }
+          }}
+        />
       </Modal>
     </Stack>
   );

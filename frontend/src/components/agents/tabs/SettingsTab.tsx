@@ -8,6 +8,7 @@ import {
   type UpdateAgentBody,
   updateAgent,
 } from "@/api/agents";
+import { DocumentsManager } from "@/components/documents/DocumentsManager";
 import {
   Banner,
   Button,
@@ -270,6 +271,10 @@ export function SettingsTab() {
           </Stack>
         </form>
       </Panel>
+
+      {/* Document removal (DOCS-02) lives in the Danger zone per the destructive-
+          actions convention: type-the-filename confirm, optional neuron purge. */}
+      <DocumentsManager agentId={agent.id} />
 
       <Panel padding="5" className={styles.panel}>
         <Stack gap="3">

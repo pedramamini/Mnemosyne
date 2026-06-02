@@ -1,4 +1,4 @@
-import { Check, Circle, Send } from "lucide-react";
+import { Check, Circle, FileText, Send } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   type DiscoveryRubric,
@@ -7,6 +7,8 @@ import {
   finalizeDiscovery,
   sendDiscoveryMessage,
 } from "@/api/discovery";
+import { DocumentUploader } from "@/components/documents/DocumentUploader";
+import { useAgentDocuments } from "@/components/documents/useAgentDocuments";
 import {
   Badge,
   Banner,
@@ -87,6 +89,13 @@ export function DiscoveryChat({
   const transcriptRef = useRef<HTMLDivElement>(null);
   const kickedOff = useRef(false);
 
+  // Documents attached during creation (DOCS-02): they seed the brain at Build and
+  // their summaries feed the Discovery interview. We track the count here for the
+  // gate indicator and refresh it whenever the uploader reports a completed ingest.
+  const { documents: attachedDocs, refresh: refreshDocs } =
+    useAgentDocuments(discoveryId);
+  const attachedCount = attachedDocs.length;
+
   // Auto-scroll the transcript to the newest turn / typing indicator. The deps
   // are intentional re-run triggers (the body reads only the ref), so the
   // "more deps than necessary" lint is suppressed deliberately.
@@ -159,141 +168,164 @@ export function DiscoveryChat({
   const visibleMessages = messages.filter((m) => m.content.trim().length > 0);
 
   return (
-    <div className={styles.layout}>
-      {/* ── Conversation column ─────────────────────────────────────────── */}
-      <Stack gap="4" className={styles.conversation}>
-        <div
-          ref={transcriptRef}
-          className={styles.transcript}
-          role="log"
-          aria-label="Discovery conversation"
-        >
-          {visibleMessages.length === 0 && !pending ? (
-            <Text color="text-muted" as="p" className={styles.intro}>
-              Tell Mnemosyne more about what this agent should track. It'll ask
-              a few questions, then you can create the agent once it understands
-              enough.
-            </Text>
-          ) : (
-            <Stack gap="3">
-              {visibleMessages.map((m) => (
-                <div
-                  key={m.key}
-                  className={cx(
-                    styles.bubble,
-                    m.role === "user" ? styles.user : styles.assistant,
-                  )}
-                >
-                  <Text size="sm" as="p" className={styles.bubbleText}>
-                    {m.content}
-                  </Text>
-                </div>
-              ))}
-              {pending && (
-                <div className={cx(styles.bubble, styles.assistant)}>
-                  <Inline gap="2">
-                    <Spinner size="sm" label="Mnemosyne is thinking" />
-                    <Text size="sm" color="text-muted">
-                      Thinking…
+    <Stack gap="5">
+      <div className={styles.layout}>
+        {/* ── Conversation column ─────────────────────────────────────────── */}
+        <Stack gap="4" className={styles.conversation}>
+          <div
+            ref={transcriptRef}
+            className={styles.transcript}
+            role="log"
+            aria-label="Discovery conversation"
+          >
+            {visibleMessages.length === 0 && !pending ? (
+              <Text color="text-muted" as="p" className={styles.intro}>
+                Tell Mnemosyne more about what this agent should track. It'll
+                ask a few questions, then you can create the agent once it
+                understands enough.
+              </Text>
+            ) : (
+              <Stack gap="3">
+                {visibleMessages.map((m) => (
+                  <div
+                    key={m.key}
+                    className={cx(
+                      styles.bubble,
+                      m.role === "user" ? styles.user : styles.assistant,
+                    )}
+                  >
+                    <Text size="sm" as="p" className={styles.bubbleText}>
+                      {m.content}
+                    </Text>
+                  </div>
+                ))}
+                {pending && (
+                  <div className={cx(styles.bubble, styles.assistant)}>
+                    <Inline gap="2">
+                      <Spinner size="sm" label="Mnemosyne is thinking" />
+                      <Text size="sm" color="text-muted">
+                        Thinking…
+                      </Text>
+                    </Inline>
+                  </div>
+                )}
+              </Stack>
+            )}
+          </div>
+
+          {error && (
+            <Banner variant="danger" title="Something went wrong">
+              {error}
+            </Banner>
+          )}
+
+          <Stack gap="2">
+            <Textarea
+              aria-label="Your answer"
+              rows={3}
+              placeholder="Type your answer…"
+              value={draft}
+              disabled={pending}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onComposerKeyDown}
+            />
+            <Inline justify="end">
+              <Button
+                onClick={() => void send(draft)}
+                loading={pending}
+                disabled={draft.trim().length === 0}
+                rightIcon={<Icon icon={Send} size="sm" />}
+              >
+                Send
+              </Button>
+            </Inline>
+          </Stack>
+        </Stack>
+
+        {/* ── Rubric / confidence panel ───────────────────────────────────── */}
+        <Panel padding="5" className={styles.rubric}>
+          <Stack gap="4">
+            <Stack gap="1">
+              <Heading level={4}>Scope</Heading>
+              <Text size="sm" color="text-muted" as="p">
+                Mnemosyne lights these up as it gets confident it understands
+                each piece of what you want.
+              </Text>
+            </Stack>
+
+            <Stack gap="2">
+              {RUBRIC_FACETS.map((facet) => {
+                const done = rubric[facet.key];
+                return (
+                  <Inline key={facet.key} gap="2" align="center" wrap={false}>
+                    <Badge
+                      variant={done ? "success" : "neutral"}
+                      appearance={done ? "solid" : "subtle"}
+                    >
+                      <Icon icon={done ? Check : Circle} size="sm" />
+                    </Badge>
+                    <Text
+                      size="sm"
+                      color={done ? "text" : "text-muted"}
+                      weight={done ? "medium" : "regular"}
+                    >
+                      {facet.label}
                     </Text>
                   </Inline>
-                </div>
-              )}
+                );
+              })}
             </Stack>
-          )}
-        </div>
 
-        {error && (
-          <Banner variant="danger" title="Something went wrong">
-            {error}
-          </Banner>
-        )}
-
-        <Stack gap="2">
-          <Textarea
-            aria-label="Your answer"
-            rows={3}
-            placeholder="Type your answer…"
-            value={draft}
-            disabled={pending}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={onComposerKeyDown}
-          />
-          <Inline justify="end">
-            <Button
-              onClick={() => void send(draft)}
-              loading={pending}
-              disabled={draft.trim().length === 0}
-              rightIcon={<Icon icon={Send} size="sm" />}
-            >
-              Send
-            </Button>
-          </Inline>
-        </Stack>
-      </Stack>
-
-      {/* ── Rubric / confidence panel ───────────────────────────────────── */}
-      <Panel padding="5" className={styles.rubric}>
-        <Stack gap="4">
-          <Stack gap="1">
-            <Heading level={4}>Scope</Heading>
-            <Text size="sm" color="text-muted" as="p">
-              Mnemosyne lights these up as it gets confident it understands each
-              piece of what you want.
-            </Text>
-          </Stack>
-
-          <Stack gap="2">
-            {RUBRIC_FACETS.map((facet) => {
-              const done = rubric[facet.key];
-              return (
-                <Inline key={facet.key} gap="2" align="center" wrap={false}>
-                  <Badge
-                    variant={done ? "success" : "neutral"}
-                    appearance={done ? "solid" : "subtle"}
-                  >
-                    <Icon icon={done ? Check : Circle} size="sm" />
-                  </Badge>
-                  <Text
-                    size="sm"
-                    color={done ? "text" : "text-muted"}
-                    weight={done ? "medium" : "regular"}
-                  >
-                    {facet.label}
-                  </Text>
-                </Inline>
-              );
-            })}
-          </Stack>
-
-          <Stack gap="2">
-            <Inline justify="between" align="baseline">
-              <Text size="sm" weight="medium">
-                Confidence
-              </Text>
-              {showMeter && (
-                <Text size="sm" color="text-muted">
-                  {pct}%
+            <Stack gap="2">
+              <Inline justify="between" align="baseline">
+                <Text size="sm" weight="medium">
+                  Confidence
                 </Text>
-              )}
-            </Inline>
-            <ProgressBar
-              label="Discovery confidence"
-              variant={ready ? "success" : "primary"}
-              value={showMeter ? pct : undefined}
-            />
-            <Text size="xs" color="text-muted" as="p">
-              {satisfiedCount} of {RUBRIC_FACETS.length} facets understood
-            </Text>
-          </Stack>
+                {showMeter && (
+                  <Text size="sm" color="text-muted">
+                    {pct}%
+                  </Text>
+                )}
+              </Inline>
+              <ProgressBar
+                label="Discovery confidence"
+                variant={ready ? "success" : "primary"}
+                value={showMeter ? pct : undefined}
+              />
+              <Text size="xs" color="text-muted" as="p">
+                {satisfiedCount} of {RUBRIC_FACETS.length} facets understood
+              </Text>
+            </Stack>
 
-          {ready && (
-            <Button fullWidth onClick={onFinalize} loading={finalizing}>
-              Create this agent
-            </Button>
-          )}
-        </Stack>
+            {attachedCount > 0 && (
+              <Inline gap="2" align="center">
+                <Badge variant="primary" appearance="subtle">
+                  <Icon icon={FileText} size="sm" />
+                </Badge>
+                <Text size="sm" color="text-muted">
+                  {attachedCount} document{attachedCount === 1 ? "" : "s"}{" "}
+                  attached
+                </Text>
+              </Inline>
+            )}
+
+            {ready && (
+              <Button fullWidth onClick={onFinalize} loading={finalizing}>
+                Create this agent
+              </Button>
+            )}
+          </Stack>
+        </Panel>
+      </div>
+
+      {/* ── Attach documents (DOCS-02) ───────────────────────────────────── */}
+      <Panel padding="5">
+        <DocumentUploader
+          agentId={discoveryId}
+          variant="discovery"
+          onIngested={() => refreshDocs()}
+        />
       </Panel>
-    </div>
+    </Stack>
   );
 }

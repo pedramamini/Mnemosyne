@@ -1037,6 +1037,22 @@ rate limit. The orchestrator (`ingestDocuments`) is exported so it unit-tests di
 `env.AI` + recording sandbox (`test/documents-ingest.test.ts`); the pure pieces have their own
 suites (`test/documents-convert.test.ts`, `test/documents-chunk.test.ts`).
 
+**Document upload UI (`frontend/`, DOCS-02):** the user-facing surface for the DOCS-01 routes lives in
+`frontend/src/api/documents.ts` (the typed FormData adapter: `uploadDocuments` POSTs raw multipart so
+the browser sets the boundary, plus `listDocuments`/`deleteDocument` and the mirrored `ALLOWED_EXTENSIONS`
++ `MAX_UPLOAD_BYTES` + `checkFile` client-side gate) and `frontend/src/components/documents/`
+(`useAgentDocuments` - the plain `useEffect`/`useState` hook with optimistic `pending` rows;
+`DocumentUploader` - the reusable drag-and-drop + `FileButton` picker composed from `components/ui`,
+showing per-file status pending→converting / converted / seeded-with-neuron-count / failed; and
+`DocumentsManager` - the Danger-zone removal list). Upload appears on **both** surfaces: the create flow
+(`DiscoveryChat`, `variant="discovery"`, with an "N documents attached" indicator by the confidence gate -
+docs feed Discovery and seed at Build) and a **live agent** (`BrainExplorerTab`'s "Add documents" modal,
+`variant="brain"`, which `refetch`es the brain tree on a seeded ingest). Deleting a document lives under
+the agent's Settings Danger zone (`DocumentsManager`) with a type-the-filename confirm and an optional
+"also remove the N derived neurons" checkbox (`deleteDocument(..., { purgeNeurons })`). `FileButton`
+gained an opt-in `multiple` + `onSelectFiles` for the multi-file picker. Tests: `api/__tests__/documents.test.ts`,
+`components/documents/__tests__/DocumentUploader.test.tsx`, `components/agents/__tests__/DiscoveryDocuments.test.tsx`.
+
 ## Build / test / deploy
 
 TypeScript ESM, source under `src/`, tests under `test/`; intra-repo imports use explicit `.ts`
