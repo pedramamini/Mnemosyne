@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type ChatMessage,
@@ -11,7 +11,11 @@ import {
 import { AppearanceProvider } from "@/appearance/AppearanceProvider";
 import { useAgentChat } from "@/components/chat/useAgentChat";
 import { ToastProvider } from "@/components/ui";
-import { ConversationPage } from "../ConversationPage";
+import {
+  type ChatOutletContext,
+  ConversationPage,
+  ConversationView,
+} from "../ConversationPage";
 
 // Mock the conversation network helpers (keep types/util real).
 vi.mock("@/api/conversations", async (importOriginal) => {
@@ -93,6 +97,40 @@ function renderAt(path = "/agents/a1/conversations/c1") {
   );
 }
 
+// Render ConversationView the way the agent detail Chat tab does: nested under a
+// parent route that supplies the outlet context (incl. the expand controls).
+function renderEmbedded(
+  ctx: Partial<ChatOutletContext> = {},
+  path = "/agents/a1/chat/c1",
+) {
+  render(
+    <AppearanceProvider>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route
+              path="/agents/:agentId/chat"
+              element={
+                <Outlet
+                  context={
+                    {
+                      hrefFor: (id: string) => `/agents/a1/chat/${id}`,
+                      agentName: "Realtor",
+                      ...ctx,
+                    } satisfies ChatOutletContext
+                  }
+                />
+              }
+            >
+              <Route path=":conversationId" element={<ConversationView />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    </AppearanceProvider>,
+  );
+}
+
 describe("ConversationPage", () => {
   beforeEach(() => {
     sendSpy.mockReset();
@@ -143,5 +181,34 @@ describe("ConversationPage", () => {
       "c1",
       "Q3 planning",
     );
+  });
+
+  it("omits the expand toggle on the standalone page (no rail to fill)", async () => {
+    renderAt();
+    await screen.findByRole("button", { name: /Roadmap chat/ });
+
+    expect(
+      screen.queryByRole("button", { name: /Expand chat|Collapse chat/ }),
+    ).toBeNull();
+  });
+
+  it("renders the expand toggle when embedded and fires the handler", async () => {
+    const onToggleExpand = vi.fn();
+    renderEmbedded({ expanded: false, onToggleExpand });
+    await screen.findByRole("button", { name: /Roadmap chat/ });
+
+    const toggle = screen.getByRole("button", { name: "Expand chat" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(toggle);
+    expect(onToggleExpand).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a collapse affordance once expanded", async () => {
+    renderEmbedded({ expanded: true, onToggleExpand: vi.fn() });
+    await screen.findByRole("button", { name: /Roadmap chat/ });
+
+    const toggle = screen.getByRole("button", { name: "Collapse chat" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
   });
 });

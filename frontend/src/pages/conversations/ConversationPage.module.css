@@ -19,6 +19,11 @@
   max-width: 28rem;
 }
 
+/* Pushes trailing header actions (the expand/collapse toggle) to the far edge. */
+.headerSpacer {
+  flex: 1;
+}
+
 .center {
   display: flex;
   justify-content: center;

@@ -2,9 +2,13 @@ import { useCallback } from "react";
 import { Outlet, useMatch, useParams } from "react-router-dom";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { EmptyState } from "@/components/ui";
+import { usePersistentState } from "@/lib/usePersistentState";
 import { useAgentDetail } from "@/pages/agents/AgentDetailPage";
 import type { ChatOutletContext } from "@/pages/conversations/ConversationPage";
 import styles from "./ChatTab.module.css";
+
+/** Storage key for the "expand the thread to fill the tab" preference. */
+const EXPANDED_KEY = "mnemosyne:chat:expanded";
 
 /**
  * ChatTab (MNEMO-36) - the agent detail Chat tab. A two-pane layout: the
@@ -23,17 +27,34 @@ export function ChatTab() {
   const match = useMatch("/agents/:agentId/chat/:conversationId");
   const activeConversationId = match?.params.conversationId;
 
+  // When expanded the conversation rail is hidden so the thread fills the tab.
+  // The preference persists (a UI nicety), but we only honour it while a
+  // conversation is open - otherwise the rail would vanish with no way to pick
+  // or start one from the empty content pane.
+  const [expanded, setExpanded] = usePersistentState(EXPANDED_KEY, false);
+  const toggleExpanded = useCallback(
+    () => setExpanded((prev) => !prev),
+    [setExpanded],
+  );
+  const isExpanded = expanded && Boolean(activeConversationId);
+
   const hrefFor = useCallback(
     (id: string) => `/agents/${agentId}/chat/${id}`,
     [agentId],
   );
 
-  const outletContext: ChatOutletContext = { hrefFor, agentName: agent.name };
+  const outletContext: ChatOutletContext = {
+    hrefFor,
+    agentName: agent.name,
+    expanded: isExpanded,
+    onToggleExpand: toggleExpanded,
+  };
 
   return (
     <div
       className={styles.pane}
       data-conversation-open={activeConversationId ? "true" : undefined}
+      data-expanded={isExpanded ? "true" : undefined}
     >
       <aside className={styles.rail}>
         <ConversationList

@@ -17,6 +17,16 @@
   flex-direction: column;
 }
 
+/* Expanded: the operator collapsed the rail so the thread fills the whole tab.
+   Mirrors the narrow-viewport behaviour but is driven by an explicit toggle. */
+.pane[data-expanded="true"] {
+  grid-template-columns: 1fr;
+}
+
+.pane[data-expanded="true"] .rail {
+  display: none;
+}
+
 /* Narrow viewports: stack to one column. With a conversation open the rail
    collapses so the thread takes the full width; otherwise the rail shows and
    the (empty) content pane is hidden. */

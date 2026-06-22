@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { Maximize2, Minimize2, Pencil } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   useLocation,
@@ -17,7 +17,14 @@ import { MessageList } from "@/components/chat/MessageList";
 import { useAgentChat } from "@/components/chat/useAgentChat";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAgentAvatars } from "@/components/layout/useAgentAvatars";
-import { Banner, Button, Icon, Input, Spinner } from "@/components/ui";
+import {
+  Banner,
+  Button,
+  Icon,
+  IconButton,
+  Input,
+  Spinner,
+} from "@/components/ui";
 import styles from "./ConversationPage.module.css";
 
 const NEW_TITLE = "New conversation";
@@ -31,6 +38,14 @@ export interface ChatOutletContext {
   hrefFor: (conversationId: string) => string;
   /** Agent display name, supplied by the detail Chat tab for the assistant avatar. */
   agentName?: string;
+  /**
+   * Whether the embedding tab has collapsed its conversation rail so the thread
+   * fills the panel. Supplied only by the agent detail Chat tab; absent in the
+   * standalone route (there's no rail to expand into), which hides the toggle.
+   */
+  expanded?: boolean;
+  /** Toggle the {@link expanded} layout. Presence is what renders the toggle. */
+  onToggleExpand?: () => void;
 }
 
 /**
@@ -105,6 +120,8 @@ export function ConversationView() {
       initialMessages={detail?.messages ?? []}
       hrefFor={hrefFor}
       agentName={ctx?.agentName}
+      expanded={ctx?.expanded}
+      onToggleExpand={ctx?.onToggleExpand}
     />
   );
 }
@@ -131,6 +148,10 @@ interface ConversationThreadProps {
   hrefFor: (conversationId: string) => string;
   /** Agent display name for the assistant avatar; defaults to a generic label. */
   agentName?: string;
+  /** When the embedding tab has expanded the thread to fill the panel. */
+  expanded?: boolean;
+  /** Toggle the expanded layout; when omitted the toggle button is hidden. */
+  onToggleExpand?: () => void;
 }
 
 /** The live chat thread: editable title, transcript, and composer. */
@@ -142,6 +163,8 @@ function ConversationThread({
   initialMessages,
   hrefFor,
   agentName,
+  expanded,
+  onToggleExpand,
 }: ConversationThreadProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -242,6 +265,18 @@ function ConversationThread({
             {title}
           </Button>
         )}
+        {onToggleExpand ? (
+          <>
+            <span className={styles.headerSpacer} />
+            <IconButton
+              size="sm"
+              label={expanded ? "Collapse chat" : "Expand chat"}
+              aria-pressed={expanded}
+              icon={<Icon icon={expanded ? Minimize2 : Maximize2} size="sm" />}
+              onClick={onToggleExpand}
+            />
+          </>
+        ) : null}
       </div>
 
       <MessageList
