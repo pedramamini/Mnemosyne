@@ -95,7 +95,7 @@ export interface Env {
 
   /**
    * Workers AI - the zero-secret free default the per-user model resolver
-   * (`src/llm/getModel.ts`) falls back to: `@cf/qwen/qwen3-30b-a3b-fp8`
+   * (`src/llm/getModel.ts`) falls back to: `@cf/google/gemma-4-26b-a4b-it`
    * (PRD §7.2). BYOK providers (OpenRouter/Anthropic/OpenAI) bypass this and
    * carry their own key. Added MNEMO-13.
    */

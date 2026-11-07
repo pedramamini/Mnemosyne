@@ -170,7 +170,7 @@ tag = "v4"
 new_sqlite_classes = ["ThreadCoordinator"]
 
 # Workers AI (zero-secret LLM default) - added in MNEMO-13. Backs the free
-# `@cf/qwen/qwen3-30b-a3b-fp8` model the getModel() resolver returns when an
+# `@cf/google/gemma-4-26b-a4b-it` model the getModel() resolver returns when an
 # account has no BYOK profile (PRD §7.2). No account id / secret to provision.
 [ai]
 binding = "AI"

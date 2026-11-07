@@ -51,7 +51,7 @@ export interface ResolvedModel {
   config: ResolvedModelConfig;
 }
 
-/** The zero-secret free default: Workers AI Qwen3-30B via the `AI` binding.
+/** The zero-secret free default: Workers AI Gemma 4 26B via the `AI` binding.
  * `extra` lets the cap-fallback path tag the config (`cappedFallback: true`)
  * without changing the model. */
 function workersAiDefault(

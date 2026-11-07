@@ -9,7 +9,7 @@
  * The numbers are deliberately round. §8.4 names the per-agent container as the
  * top cost risk, so the two levers that bound it - `monthlyCostCapCents` (a
  * fail-closed spend ceiling) and `maxConcurrentSandboxes` (how many containers an
- * account can run at once) - climb with price. Free gets the zero-secret Qwen3
+ * account can run at once) - climb with price. Free gets the zero-secret Workers AI
  * default and a single container; paid tiers unlock BYOK + the messaging add-on.
  */
 
@@ -33,7 +33,7 @@ export interface Tier {
   /** How many sandboxes the account may run AT ONCE (the §8.4 concurrency lever). */
   maxConcurrentSandboxes: number;
   /**
-   * Which LLM the tier includes: `"free"` = the zero-secret Workers AI Qwen3
+   * Which LLM the tier includes: `"free"` = the zero-secret Workers AI
    * default only; `"byok"` = the account may bring its own provider key (a paid
    * feature gated by `checkTierFeature(…, "byok")`).
    */

@@ -53,7 +53,7 @@ export const UNIT_COSTS: Record<
   // so the cap + concurrency limits exist mainly to bound THIS.
   sandbox_sec: { unit: "second", centsPerUnit: 0.003 },
   // §8.5: blended LLM token cost. 0.00015¢/token = $0.0015 per 1k tokens - a
-  // conservative blend across the free Qwen3 default + cheaper BYOK models.
+  // conservative blend across the free Workers AI default + cheaper BYOK models.
   llm_tokens: { unit: "token", centsPerUnit: 0.00015 },
   // §9.2: the messaging add-on. ~1¢/SMS segment (Twilio outbound list price).
   sms_segment: { unit: "segment", centsPerUnit: 1.0 },

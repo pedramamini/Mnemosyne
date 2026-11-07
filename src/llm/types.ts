@@ -56,7 +56,8 @@ export interface ResolvedModelConfig {
 }
 
 /**
- * Free default model: Workers AI Qwen3-30B (reasoning). Zero secrets, zero egress
+ * Free default model: Workers AI Gemma 4 26B A4B (reasoning, function calling). It
+ * replaced Qwen3-30B-A3B, which Cloudflare retires on 2026-11-20. Zero secrets, zero egress
  * (PRD §7.2). Gives coherent CHAT answers out of the box.
  *
  * ⚠️ KNOWN CEILING (staging QA 2026-05-25): free Workers AI models can't drive the
@@ -76,7 +77,7 @@ export interface ResolvedModelConfig {
  * capable model (Claude/GPT - already supported in getModel's anthropic/openai
  * paths), which handles the full catalog and reliably calls tools.
  */
-export const DEFAULT_WORKERS_AI_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8";
+export const DEFAULT_WORKERS_AI_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 
 /** Free default provider - applies when an account has no BYOK profile. PRD §7.2. */
 export const DEFAULT_PROVIDER: LlmProvider = "workers-ai";

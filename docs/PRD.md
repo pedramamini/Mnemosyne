@@ -234,7 +234,7 @@ is the Vercel AI SDK loop hosted by `AIChatAgent`:
 One harness, swappable model. `getModel()` resolves a Vercel-AI-compatible `LanguageModel` **per-user**
 (Crema's resolver is global-env; Mnemosyne reads the user's profile).
 
-- **Free default:** Workers AI **`@cf/qwen/qwen3-30b-a3b-fp8`** - confirmed function-calling + reasoning
+- **Free default:** Workers AI **`@cf/google/gemma-4-26b-a4b-it`** since 2026-11-06 (Cloudflare retires Qwen3 on 2026-11-20; one-tool function call verified live; the full catalog not yet). Originally **`@cf/qwen/qwen3-30b-a3b-fp8`** - confirmed function-calling + reasoning
   + batch; 10k Neurons/day free, then $0.011/1k. Chosen over Hermes 2 Pro 7B (Qwen3 adds a reasoning
   trace and a 32k-class context). Zero secrets, billed to the platform, capped per-user.
 - **BYOK upgrade:** user saves `{provider, model, key}` in their profile. **OpenRouter** primary (one key
